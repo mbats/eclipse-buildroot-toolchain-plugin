@@ -1,0 +1,5 @@
+org.buildroot.cdt.toolchain.update/target
+org.buildroot.cdt.toolchain.feature/target
+org.buildroot.cdt.toolchain/bin
+org.buildroot.cdt.toolchain/target
+

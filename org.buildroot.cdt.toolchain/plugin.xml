@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.cdt.managedbuilder.core.buildProperties">
+      <propertyValue
+            id="org.buildroot.cdt.toolchain.buildArtefactType.application"
+            name="Buildroot Cross Target Application"
+            property="org.eclipse.cdt.build.core.buildArtefactType">
+      </propertyValue>
+   </extension>
+   <extension
+         id="BUILDROOT_GCC_BuildDefinitions"
+         name="Managed Build Definitions"
+         point="org.eclipse.cdt.managedbuilder.core.buildDefinitions">
+      <managedBuildRevision
+            fileVersion="1.0.0">
+      </managedBuildRevision>
+      <dynamicElementProvider
+      class="org.buildroot.cdt.toolchain.DynamicToolchainProvider"
+      name="DynamicToolchainProvider"/>
+   </extension>
+
+
+ <extension
+         id="ARM_ManagedMakePerProjectProfileC"
+         name="ARM ManagedMakePerProjectProfileC"
+         point="org.eclipse.cdt.make.core.ScannerConfigurationDiscoveryProfile">
+      <scannerInfoCollector
+            class="org.buildroot.cdt.toolchain.DefaultGCCScannerInfoCollector"
+            scope="project">
+      </scannerInfoCollector>
+      <buildOutputProvider>
+      <open></open>
+         <scannerInfoConsoleParser
+               class="org.buildroot.cdt.toolchain.ManagedGCCScannerInfoConsoleParser">
+         </scannerInfoConsoleParser>
+      </buildOutputProvider>
+      <scannerInfoProvider
+            providerId="specsFile">
+         <run
+               arguments="-E -P -v -dD ${plugin_state_location}/specs.c"
+               class="org.eclipse.cdt.make.internal.core.scannerconfig2.GCCSpecsRunSIProvider"
+               command="/home/melanie/buildroot/output/host/usr/bin/arm-none-linux-gnueabi-gcc">
+         </run>
+         <scannerInfoConsoleParser
+               class="org.eclipse.cdt.make.internal.core.scannerconfig.gnu.GCCSpecsConsoleParser">
+         </scannerInfoConsoleParser>
+      </scannerInfoProvider>
+   </extension>
+</plugin>
