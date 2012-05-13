@@ -17,11 +17,13 @@ public class BuildrootUtils {
 				.getBytes());
 		IExtensionRegistry registry = RegistryFactory.getRegistry();
 		Object key = ((ExtensionRegistry) registry).getTemporaryUserToken();
-		Bundle bundle = Activator.getDefault().getBundle();
+		Bundle bundle = BuildrootActivator.getDefault().getBundle();
 		IContributor contributor = ContributorFactoryOSGi
 				.createContributor(bundle);
 		if (!registry.addContribution(is, contributor, false, null, null, key)) {
-			// TODO Log an error or something
+			BuildrootActivator.getDefault().warning(
+					"Contribution is not registered : " + buffer.toString(),
+					null);
 		}
 	}
 

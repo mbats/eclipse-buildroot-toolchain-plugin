@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Buildroot Toolchain
 Bundle-SymbolicName: org.buildroot.cdt.toolchain;singleton:=true
 Bundle-Version: 1.0.0.qualifier
-Bundle-Activator: org.buildroot.cdt.toolchain.Activator
+Bundle-Activator: org.buildroot.cdt.toolchain.BuildrootActivator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.cdt.managedbuilder.core,

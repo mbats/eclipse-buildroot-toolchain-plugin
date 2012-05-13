@@ -47,8 +47,9 @@ public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 
 			input.close();
 		} catch (FileNotFoundException e) {
-			// TODO
-			e.printStackTrace();
+			BuildrootActivator.getDefault().error(
+					"Buildroot configuration file doe not exist : "
+							+ buildrootConfigFilePath, e);
 		}
 		return configElements;
 	}
