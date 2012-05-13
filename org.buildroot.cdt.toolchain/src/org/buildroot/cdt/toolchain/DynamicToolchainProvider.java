@@ -36,15 +36,18 @@ public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 				String path = config[0];
 				String prefix = config[1];
 				String architecture = config[2].toUpperCase();
+				if (!BuildrootUtils.isCompilerAvailable(path, prefix, "gcc"))
+					continue;
 				// Create toolchain
 				BuildrootToolchain toolchain = new BuildrootToolchain(path,
 						prefix, architecture);
 				configElements.add(toolchain);
+
 			}
 
 			input.close();
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
+			// TODO
 			e.printStackTrace();
 		}
 		return configElements;

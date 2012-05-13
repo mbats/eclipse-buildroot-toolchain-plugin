@@ -1,15 +1,17 @@
 package org.buildroot.cdt.toolchain;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 
 import org.eclipse.core.internal.registry.ExtensionRegistry;
 import org.eclipse.core.runtime.ContributorFactoryOSGi;
 import org.eclipse.core.runtime.IContributor;
 import org.eclipse.core.runtime.IExtensionRegistry;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.RegistryFactory;
 import org.osgi.framework.Bundle;
 
-public class BuildrootExtensionPointUtils {
+public class BuildrootUtils {
 	public static void registerExtensionPoint(StringBuffer buffer) {
 		ByteArrayInputStream is = new ByteArrayInputStream(buffer.toString()
 				.getBytes());
@@ -21,5 +23,18 @@ public class BuildrootExtensionPointUtils {
 		if (!registry.addContribution(is, contributor, false, null, null, key)) {
 			// TODO Log an error or something
 		}
+	}
+
+	public static boolean isCompilerAvailable(String path, String prefix,
+			String compilerName) {
+		File file = new File(getToolPath(prefix, path, compilerName));
+		return file.exists();
+	}
+
+	public static String getToolPath(String prefix, String pathStr,
+			String toolName) {
+		Path path = new Path(pathStr);
+		return ((Path) path.append("host/usr/bin/" + prefix + toolName))
+				.toString();
 	}
 }

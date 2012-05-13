@@ -35,7 +35,7 @@ public class BuildrootInputType extends BuildrootConfigElement {
 		}
 
 		StringBuffer buffer = createScannerConfigurationDiscoveryProfile();
-		BuildrootExtensionPointUtils.registerExtensionPoint(buffer);
+		BuildrootUtils.registerExtensionPoint(buffer);
 	}
 
 	public String getScannerConfigProfileId() {

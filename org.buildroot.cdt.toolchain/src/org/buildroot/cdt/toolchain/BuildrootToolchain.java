@@ -13,26 +13,30 @@ public class BuildrootToolchain extends BuildrootConfigElement {
 
 		BuildrootTargetPlatform targetPlatform = new BuildrootTargetPlatform(
 				path, architecture);
+		addChildren(targetPlatform);
+
 		BuildrootTool assembler = new BuildrootTool(path, prefix, architecture,
 				BuildrootToolType.ASSEMBLER);
+		addChildren(assembler);
+
 		BuildrootTool cCompiler = new BuildrootTool(path, prefix, architecture,
 				BuildrootToolType.C_COMPILER);
+		addChildren(cCompiler);
 
 		BuildrootTool cLinker = new BuildrootTool(path, prefix, architecture,
 				BuildrootToolType.C_LINKER);
-		BuildrootTool ccCompiler = new BuildrootTool(path, prefix,
-				architecture, BuildrootToolType.CC_COMPILER);
-
-		BuildrootTool ccLinker = new BuildrootTool(path, prefix, architecture,
-				BuildrootToolType.CC_LINKER);
-		BuildrootBuilder builder = new BuildrootBuilder(path, architecture);
-
-		addChildren(targetPlatform);
-		addChildren(assembler);
-		addChildren(cCompiler);
 		addChildren(cLinker);
-		addChildren(ccCompiler);
-		addChildren(ccLinker);
+
+		if (BuildrootUtils.isCompilerAvailable(path, prefix, "g++")) {
+			BuildrootTool ccCompiler = new BuildrootTool(path, prefix,
+					architecture, BuildrootToolType.CC_COMPILER);
+			BuildrootTool ccLinker = new BuildrootTool(path, prefix,
+					architecture, BuildrootToolType.CC_LINKER);
+			addChildren(ccCompiler);
+			addChildren(ccLinker);
+		}
+
+		BuildrootBuilder builder = new BuildrootBuilder(path, architecture);
 		addChildren(builder);
 	}
 

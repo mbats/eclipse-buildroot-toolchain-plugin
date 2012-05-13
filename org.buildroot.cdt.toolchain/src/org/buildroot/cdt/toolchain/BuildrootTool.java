@@ -1,6 +1,5 @@
 package org.buildroot.cdt.toolchain;
 
-import org.eclipse.core.runtime.Path;
 
 public class BuildrootTool extends BuildrootConfigElement {
 	private static final String SUPER_CLASS = "superClass";
@@ -19,7 +18,6 @@ public class BuildrootTool extends BuildrootConfigElement {
 
 	public BuildrootTool(String path, String prefix, String architecture,
 			BuildrootToolType toolType) {
-		Path toolPath = new Path(path);
 		String toolName = null;
 		String idSuffix = null;
 		String toolDescription = null;
@@ -67,8 +65,8 @@ public class BuildrootTool extends BuildrootConfigElement {
 		default:
 			break;
 		}
-		toolPath = (Path) toolPath.append("host/usr/bin/" + prefix + toolName);
-		this.command = toolPath.toString();
+		String toolPath = BuildrootUtils.getToolPath(prefix, path, toolName);
+		this.command = toolPath;
 		this.id = getIdentifier(path, idSuffix);
 		this.name = getName(architecture, path, toolDescription);
 
