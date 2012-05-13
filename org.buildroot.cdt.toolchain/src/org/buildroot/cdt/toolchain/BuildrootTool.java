@@ -67,8 +67,7 @@ public class BuildrootTool extends BuildrootConfigElement {
 		default:
 			break;
 		}
-		toolPath = (Path) toolPath.append("host/usr/bin/" + prefix + "-"
-				+ toolName);
+		toolPath = (Path) toolPath.append("host/usr/bin/" + prefix + toolName);
 		this.command = toolPath.toString();
 		this.id = getIdentifier(path, idSuffix);
 		this.name = getName(architecture, path, toolDescription);
