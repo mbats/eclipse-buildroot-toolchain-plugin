@@ -1,4 +1,6 @@
-package org.buildroot.cdt.toolchain;
+package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
+
+import org.buildroot.cdt.toolchain.BuildrootUtils;
 
 
 public class BuildrootTool extends BuildrootConfigElement {

@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import org.buildroot.cdt.toolchain.managedbuilder.projecttype.BuildrootProjectType;
+import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootToolchain;
 import org.eclipse.cdt.managedbuilder.core.IManagedConfigElement;
 import org.eclipse.cdt.managedbuilder.core.IManagedConfigElementProvider;
 
@@ -43,6 +45,10 @@ public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 						prefix, architecture);
 				configElements.add(toolchain);
 
+				// Create projectType
+				BuildrootProjectType projectType = new BuildrootProjectType(
+						path, toolchain);
+				configElements.add(projectType);
 			}
 
 			input.close();

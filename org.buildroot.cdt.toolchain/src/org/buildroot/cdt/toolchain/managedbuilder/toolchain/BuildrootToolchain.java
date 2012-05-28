@@ -1,6 +1,7 @@
-package org.buildroot.cdt.toolchain;
+package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
-import org.buildroot.cdt.toolchain.BuildrootTool.BuildrootToolType;
+import org.buildroot.cdt.toolchain.BuildrootUtils;
+import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootTool.BuildrootToolType;
 
 public class BuildrootToolchain extends BuildrootConfigElement {
 
@@ -60,4 +61,7 @@ public class BuildrootToolchain extends BuildrootConfigElement {
 		return null;
 	}
 
+	public String getIdentifier() {
+		return id;
+	}
 }

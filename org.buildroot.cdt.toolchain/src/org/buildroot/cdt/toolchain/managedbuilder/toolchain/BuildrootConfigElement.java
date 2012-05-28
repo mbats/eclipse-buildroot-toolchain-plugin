@@ -1,4 +1,4 @@
-package org.buildroot.cdt.toolchain;
+package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
 import java.util.ArrayList;
 import java.util.List;

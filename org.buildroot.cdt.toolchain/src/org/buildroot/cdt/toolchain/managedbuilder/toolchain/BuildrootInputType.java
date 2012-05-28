@@ -1,6 +1,7 @@
-package org.buildroot.cdt.toolchain;
+package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
-import org.buildroot.cdt.toolchain.BuildrootTool.BuildrootToolType;
+import org.buildroot.cdt.toolchain.BuildrootUtils;
+import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootTool.BuildrootToolType;
 
 public class BuildrootInputType extends BuildrootConfigElement {
 	private static final Object SCANNER_CONFIG_DISCOVERY_PROFILE_ID = "scannerConfigDiscoveryProfileId";

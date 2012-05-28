@@ -1,4 +1,4 @@
-package org.buildroot.cdt.toolchain;
+package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
 public class BuildrootTargetPlatform extends BuildrootConfigElement {
 	private static final String BINARY_PARSER = "binaryParser";
