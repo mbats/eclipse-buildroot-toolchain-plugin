@@ -8,7 +8,7 @@ This Eclipse plugin allows to integrate Buildroot project toolchains with Eclips
 
 [Buildroot](http://buildroot.org) is a tool to build embedded Linux system using cross-compilation. It allows to build a cross-compilation toolchain (or re-use an existing one), a root filesystem image with applications and libraries, a kernel image and a bootloader image or any combination of these.
 
-Since Buildroot generates a toolchain and install libraries and headers to develop applications for the target embedded system, it is desirable to easily access these toolchains from Eclise CDT. Accessing those toolchains allows to build application for the target directly within Eclipse.
+Since Buildroot generates a toolchain and install libraries and headers to develop applications for the target embedded system, it is desirable to easily access these toolchains from Eclipse CDT. Accessing those toolchains allows to build application for the target directly within Eclipse.
 
 Usage
 -----
