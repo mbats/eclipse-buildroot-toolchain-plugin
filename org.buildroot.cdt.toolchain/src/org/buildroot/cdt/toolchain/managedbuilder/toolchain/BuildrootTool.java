@@ -1,3 +1,12 @@
+/*******************************************************************************
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors:
+ *     Melanie Bats <melanie.bats@obeo.fr> - Initial contribution
+ *******************************************************************************/
 package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
 import org.buildroot.cdt.toolchain.BuildrootUtils;
@@ -14,10 +23,21 @@ public class BuildrootTool extends BuildrootConfigElement {
 	private String natureFilter;
 	private String superClass;
 
+	/**
+	 * It exists 5 types of tool : assembler, compilers for C and C++, linkers
+	 * for C and C++.
+	 * */
 	public enum BuildrootToolType {
 		ASSEMBLER, C_COMPILER, CC_COMPILER, C_LINKER, CC_LINKER
 	}
 
+	/**
+	 * Buildroot tool constructor.
+	 * @param path Toolchain path
+	 * @param prefix Tool path prefix
+	 * @param architecture Toolchain architecture
+	 * @param toolType Tool type
+	 */
 	public BuildrootTool(String path, String prefix, String architecture,
 			BuildrootToolType toolType) {
 		String toolName = null;

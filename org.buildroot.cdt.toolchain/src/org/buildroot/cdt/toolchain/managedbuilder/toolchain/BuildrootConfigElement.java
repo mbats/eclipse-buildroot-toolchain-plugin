@@ -1,3 +1,12 @@
+/*******************************************************************************
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors:
+ *     Melanie Bats <melanie.bats@obeo.fr> - Initial contribution
+ *******************************************************************************/
 package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
 import java.util.ArrayList;
@@ -5,6 +14,9 @@ import java.util.List;
 
 import org.eclipse.cdt.managedbuilder.core.IManagedConfigElement;
 
+/**
+ * Buildroot configuration elements for loading the managed build model objects.
+ */
 public abstract class BuildrootConfigElement implements IManagedConfigElement {
 	protected static final String OS_LIST = "osList";
 	protected static final String NAME = "name";

@@ -1,8 +1,29 @@
+/*******************************************************************************
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors:
+ *     Melanie Bats <melanie.bats@obeo.fr> - Initial contribution
+ *******************************************************************************/
 package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
 import org.buildroot.cdt.toolchain.BuildrootUtils;
 import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootTool.BuildrootToolType;
 
+/**
+ * For each tool the followed inputType is generated dynamically : <inputType
+ * dependencyCalculator=
+ * "org.eclipse.cdt.managedbuilder.makegen.gnu.DefaultGCCDependencyCalculator2"
+ * dependencyContentType="org.eclipse.cdt.core.cHeader" dependencyExtensions="h"
+ * id="org.buildroot.cdt.toolchain.arm.linux.gnueabi.assembler.input"
+ * languageId="org.eclipse.cdt.core.assembly"
+ * sourceContentType="org.eclipse.cdt.core.asmSource" sources="s,S,asm"
+ * superClass="cdt.managedbuild.tool.gnu.assembler.input"> </inputType>
+ * 
+ * @author Melanie Bats <melanie.bats@obeo.fr>
+ */
 public class BuildrootInputType extends BuildrootConfigElement {
 	private static final Object SCANNER_CONFIG_DISCOVERY_PROFILE_ID = "scannerConfigDiscoveryProfileId";
 	private String id;
@@ -13,6 +34,18 @@ public class BuildrootInputType extends BuildrootConfigElement {
 	private BuildrootToolType toolType;
 	private String command;
 
+	/**
+	 * Buildroot input type constructor.
+	 * 
+	 * @param path
+	 *            Toolchain path
+	 * @param architecture
+	 *            Toolchain architecture
+	 * @param toolType
+	 *            Tool type
+	 * @param command
+	 *            Input type command
+	 */
 	public BuildrootInputType(String path, String architecture,
 			BuildrootToolType toolType, String command) {
 		this.command = command;
@@ -35,7 +68,9 @@ public class BuildrootInputType extends BuildrootConfigElement {
 			break;
 		}
 
+		// Get the scanner configuration discovery profile
 		StringBuffer buffer = createScannerConfigurationDiscoveryProfile();
+		// Register this extension dynamically
 		BuildrootUtils.registerExtensionPoint(buffer);
 	}
 
@@ -70,6 +105,13 @@ public class BuildrootInputType extends BuildrootConfigElement {
 		return null;
 	}
 
+	/**
+	 * Get the scanner configuration discovery profile for the current input
+	 * type.
+	 * 
+	 * @return Scanner configuration discovery profile extension point in string
+	 *         format.
+	 */
 	private StringBuffer createScannerConfigurationDiscoveryProfile() {
 		StringBuffer buffer = new StringBuffer(
 				"<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -77,7 +119,7 @@ public class BuildrootInputType extends BuildrootConfigElement {
 		buffer.append("<plugin>");
 		buffer.append("	<extension");
 		buffer.append("		id=\"" + getScannerConfigProfileId() + "\"");
-		buffer.append("		name=\"ARM ManagedMakePerProjectProfileC\"");
+		buffer.append("		name=\"Buildroot ManagedMakePerProjectProfileC\"");
 		buffer.append("		point=\"org.eclipse.cdt.make.core.ScannerConfigurationDiscoveryProfile\">");
 		buffer.append("		<scannerInfoCollector");
 		buffer.append("			class=\"org.buildroot.cdt.toolchain.DefaultGCCScannerInfoCollector\"");
@@ -106,6 +148,11 @@ public class BuildrootInputType extends BuildrootConfigElement {
 		return buffer;
 	}
 
+	/**
+	 * Get Spec file name according for current input type.
+	 * 
+	 * @return Spec file name
+	 */
 	private String getSpecFileName() {
 		switch (toolType) {
 		case C_COMPILER:
