@@ -90,7 +90,7 @@ public class BuildrootTool extends BuildrootConfigElement {
 		String toolPath = BuildrootUtils.getToolPath(prefix, path, toolName);
 		this.command = toolPath;
 		this.id = getIdentifier(path, idSuffix);
-		this.name = getName(architecture, path, toolDescription);
+		this.name = BuildrootUtils.getToolName(architecture, path, toolDescription);
 
 		if (toolType == BuildrootToolType.C_COMPILER
 				|| toolType == BuildrootToolType.CC_COMPILER) {

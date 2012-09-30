@@ -133,7 +133,7 @@ public class BuildrootToolchain extends BuildrootConfigElement {
 	 */
 	public BuildrootToolchain(String path, String prefix, String architecture) {
 		id = getIdentifier(path, ".toolchain.base");
-		name = getName(architecture, path, null);
+		name = BuildrootUtils.getToolName(architecture, path, null);
 
 		// Create target platform
 		BuildrootTargetPlatform targetPlatform = new BuildrootTargetPlatform(

@@ -9,6 +9,10 @@
  *******************************************************************************/
 package org.buildroot.cdt.toolchain;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.buildroot.cdt.toolchain.launch.BuildrootDebuggerConfig;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IStatus;
@@ -26,6 +30,8 @@ public class BuildrootActivator extends AbstractUIPlugin {
 
 	// The shared instance
 	private static BuildrootActivator plugin;
+
+	private static Map<String, BuildrootDebuggerConfig> debuggerConfigurations = new HashMap<String, BuildrootDebuggerConfig>();
 
 	/**
 	 * The log of the plug-in.
@@ -59,6 +65,7 @@ public class BuildrootActivator extends AbstractUIPlugin {
 	 */
 	public void stop(BundleContext context) throws Exception {
 		plugin = null;
+		debuggerConfigurations.clear();
 		super.stop(context);
 	}
 
@@ -117,5 +124,20 @@ public class BuildrootActivator extends AbstractUIPlugin {
 					.getSymbolicName(), warning, e);
 			this.getLog().log(status);
 		}
+	}
+
+	public static String getSolibPath(String name) {
+		return debuggerConfigurations.get(name).getSolibPath();
+	}
+
+	public static String getDebugName(String name) {
+		return debuggerConfigurations.get(name).getDebugName();
+	}
+
+	public static void registerDebuggerConfiguration(String architecture, String prefix,
+			String path) {
+		debuggerConfigurations.put(
+				BuildrootUtils.getToolName(architecture, path, null),
+				new BuildrootDebuggerConfig(prefix, path));
 	}
 }

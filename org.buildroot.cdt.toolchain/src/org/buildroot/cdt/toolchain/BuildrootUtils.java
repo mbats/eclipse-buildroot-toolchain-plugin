@@ -36,6 +36,7 @@ public class BuildrootUtils {
 		ByteArrayInputStream is = new ByteArrayInputStream(buffer.toString()
 				.getBytes());
 		IExtensionRegistry registry = RegistryFactory.getRegistry();
+		@SuppressWarnings("restriction")
 		Object key = ((ExtensionRegistry) registry).getTemporaryUserToken();
 		Bundle bundle = BuildrootActivator.getDefault().getBundle();
 		IContributor contributor = ContributorFactoryOSGi
@@ -80,5 +81,20 @@ public class BuildrootUtils {
 		Path path = new Path(pathStr);
 		return ((Path) path.append("host/usr/bin/" + prefix + toolName))
 				.toString();
+	}
+	
+	/**
+	 * Get tool name
+	 * @param architecture Toolchain architecture
+	 * @param path Toolchain path
+	 * @param toolDescription Tool description
+	 * @return
+	 */
+	public static String getToolName(String architecture, String path,
+			String toolDescription) {
+		if (toolDescription != null)
+			return "Buildroot " + architecture + " " + toolDescription + " ("
+					+ path + ")";
+		return "Buildroot " + architecture + " (" + path + ")";
 	}
 }

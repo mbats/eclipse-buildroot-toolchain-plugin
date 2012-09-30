@@ -19,35 +19,6 @@
       <dynamicElementProvider
       class="org.buildroot.cdt.toolchain.DynamicToolchainProvider"
       name="DynamicToolchainProvider"/>
-       <!--projectType
-            buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe"
-            id="com.analog.gnu.toolchain.blackfin.target.bfin.elf.exe"
-            isAbstract="false"
-            isTest="false">
-         <configuration
-               buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug"
-               cleanCommand="rm -rf"
-               id="com.analog.gnu.toolchain.blackfin.config.bfin.elf.exe.debug"
-               name="%ConfigName.Dbg"
-               parent="cdt.managedbuild.config.gnu.base">
-            <toolChain
-                  id="com.analog.gnu.toolchain.blackfin.toolchain.bfin.elf.exe.debug"
-                  superClass="org.buildroot.cdt.toolchain.arm.linux.gnueabi.toolchain.base">
-            </toolChain>
-         </configuration>
-         <configuration
-               buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release"
-               cleanCommand="rm -rf"
-               id="com.analog.gnu.toolchain.blackfin.config.bfin.elf.exe.release"
-               name="%ConfigName.Rel"
-               parent="cdt.managedbuild.config.gnu.base">
-            <toolChain
-                  id="com.analog.gnu.toolchain.blackfin.toolchain.bfin.elf.exe.release"
-                  superClass="org.buildroot.cdt.toolchain.arm.linux.gnueabi.toolchain.base">
-            </toolChain>
-         </configuration>
-      </projectType-->
    </extension>
-
 
 </plugin>

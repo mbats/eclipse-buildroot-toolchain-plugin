@@ -9,6 +9,8 @@
  *******************************************************************************/
 package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
+import org.buildroot.cdt.toolchain.BuildrootUtils;
+
 public class BuildrootTargetPlatform extends BuildrootConfigElement {
 	private static final String BINARY_PARSER = "binaryParser";
 	private String id;
@@ -16,7 +18,7 @@ public class BuildrootTargetPlatform extends BuildrootConfigElement {
 
 	public BuildrootTargetPlatform(String path, String architecture) {
 		id = getIdentifier(path, "platform.base");
-		name = getName(architecture, path, "Platform");
+		name = BuildrootUtils.getToolName(architecture, path, "Platform");
 	}
 
 	@Override

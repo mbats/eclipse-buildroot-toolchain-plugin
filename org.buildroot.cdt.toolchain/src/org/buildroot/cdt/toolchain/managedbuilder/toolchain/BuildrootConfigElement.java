@@ -37,14 +37,6 @@ public abstract class BuildrootConfigElement implements IManagedConfigElement {
 		return "org.buildroot." + path + "." + suffix;
 	}
 
-	public String getName(String architecture, String path,
-			String toolDescription) {
-		if (toolDescription != null)
-			return "Buildroot " + architecture + " " + toolDescription + " ("
-					+ path + ")";
-		return "Buildroot " + architecture + " (" + path + ")";
-	}
-
 	@Override
 	public IManagedConfigElement[] getChildren() {
 		return (IManagedConfigElement[]) children

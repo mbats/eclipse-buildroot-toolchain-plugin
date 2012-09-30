@@ -9,6 +9,8 @@
  *******************************************************************************/
 package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
+import org.buildroot.cdt.toolchain.BuildrootUtils;
+
 /**
  * For each toolchain the followed builder is generated dynamically :
  * <builder
@@ -42,7 +44,7 @@ public class BuildrootBuilder extends BuildrootConfigElement {
 	 */
 	public BuildrootBuilder(String path, String architecture) {
 		this.id = getIdentifier(path, "builder");
-		this.name = getName(architecture, path, "builder");
+		this.name = BuildrootUtils.getToolName(architecture, path, "builder");
 	}
 
 	@Override
