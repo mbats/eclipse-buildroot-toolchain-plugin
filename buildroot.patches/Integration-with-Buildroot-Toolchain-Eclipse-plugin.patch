@@ -1,4 +1,4 @@
-From 60c277ff1b6f5f55c59dc350a910370ad2981c2d Mon Sep 17 00:00:00 2001
+From 948bb92000bb9498cc59492a65835567c95f1cde Mon Sep 17 00:00:00 2001
 From: Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
 Date: Sun, 13 May 2012 14:15:42 +0200
 Subject: [PATCH] Integration with Buildroot Toolchain Eclipse plugin
@@ -25,7 +25,7 @@ Signed-off-by: Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
  create mode 100755 support/scripts/eclipse-register-toolchain
 
 diff --git a/Makefile b/Makefile
-index f4f7514..a875262 100644
+index f4f7514..e6c513a 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -332,6 +332,10 @@ TARGETS+=target-generatelocales
@@ -44,7 +44,7 @@ index f4f7514..a875262 100644
  endif
  
 +toolchain-eclipse-register:
-+	./support/scripts/eclipse-register-toolchain $(dir $(O)) $(notdir $(TARGET_CROSS)) $(BR2_ARCH)
++	./support/scripts/eclipse-register-toolchain $(realpath $(O)) $(notdir $(TARGET_CROSS)) $(BR2_ARCH)
 +
  source: dirs $(TARGETS_SOURCE) $(HOST_SOURCE)
  
