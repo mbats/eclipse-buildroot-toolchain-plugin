@@ -42,9 +42,14 @@
 	<repositories>
 	<!-- Common -->
 		<repository>
-			<id>indigo</id>
+			<id>Juno</id>
 			<layout>p2</layout>
-			<url>http://download.eclipse.org/releases/indigo/</url>
+			<url>http://download.eclipse.org/releases/juno</url>
+		</repository>
+		<repository>
+			<id>The Eclipse Project Updates</id>
+			<layout>p2</layout>
+			<url>http://download.eclipse.org/eclipse/updates/3.8</url>
 		</repository>
 	</repositories>
 
