@@ -10,20 +10,23 @@
 package org.buildroot.cdt.toolchain;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.buildroot.cdt.toolchain.launch.BuildrootDebuggerConfig;
+import org.eclipse.cdt.managedbuilder.core.IManagedConfigElement;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.ui.IStartup;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 /**
  * The activator class controls the plug-in life cycle
  */
-public class BuildrootActivator extends AbstractUIPlugin {
+public class BuildrootActivator extends AbstractUIPlugin implements IStartup {
 
 	// The plug-in ID
 	public static final String PLUGIN_ID = "org.buildroot.cdt.toolchain"; //$NON-NLS-1$
@@ -33,10 +36,15 @@ public class BuildrootActivator extends AbstractUIPlugin {
 
 	private static Map<String, BuildrootDebuggerConfig> debuggerConfigurations = new HashMap<String, BuildrootDebuggerConfig>();
 
+	// Buildroot toolchain provider
+	private static DynamicToolchainProvider provider;
+
 	/**
 	 * The log of the plug-in.
 	 */
 	private static ILog logger;
+
+	private static IManagedConfigElement[] configElements;
 
 	/**
 	 * The constructor
@@ -134,10 +142,30 @@ public class BuildrootActivator extends AbstractUIPlugin {
 		return debuggerConfigurations.get(name).getDebugName();
 	}
 
-	public static void registerDebuggerConfiguration(String architecture, String prefix,
-			String path) {
+	/**
+	 * Get the Buildroot toolchain provider.
+	 * 
+	 * @return Toolchain provider
+	 */
+	public static DynamicToolchainProvider getToolchainProvider() {
+		return provider;
+	}
+
+	public static void registerDebuggerConfiguration(String architecture,
+			String prefix, String path) {
 		debuggerConfigurations.put(
 				BuildrootUtils.getToolName(architecture, path, null),
 				new BuildrootDebuggerConfig(prefix, path));
+	}
+
+	@Override
+	public void earlyStartup() {
+		// Buildroot toolchain provider
+		DynamicToolchainProvider provider = new DynamicToolchainProvider();
+		configElements = provider.getConfigElements();
+	}
+
+	public static IManagedConfigElement[] getConfigElements() {
+		return configElements;
 	}
 }

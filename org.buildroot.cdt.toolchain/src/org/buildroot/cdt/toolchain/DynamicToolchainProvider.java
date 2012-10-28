@@ -43,10 +43,7 @@ public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 
 		// Parse the build configuration and provide dynamically the
 		// configuration information to CDT
-		List<IManagedConfigElement> configElements = parseBuildrootConfiguration(buildrootConfigFilePath);
-
-		return (IManagedConfigElement[]) configElements
-				.toArray(new IManagedConfigElement[configElements.size()]);
+		return parseBuildrootConfiguration(buildrootConfigFilePath);
 	}
 
 	/**
@@ -145,8 +142,11 @@ public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 	 *            Path to the buildroot configuration file
 	 * @return List of CDT configuration elements
 	 */
-	private List<IManagedConfigElement> parseBuildrootConfiguration(
+	private IManagedConfigElement[] parseBuildrootConfiguration(
 			final String buildrootConfigFilePath) {
+		if (BuildrootActivator.getConfigElements() != null)
+			return BuildrootActivator.getConfigElements();
+
 		File file = new File(buildrootConfigFilePath);
 		Scanner input;
 		List<IManagedConfigElement> configElements = new ArrayList<IManagedConfigElement>();
@@ -184,9 +184,10 @@ public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 			input.close();
 		} catch (FileNotFoundException e) {
 			BuildrootActivator.getDefault().error(
-					"Buildroot configuration file doe not exist : "
+					"Buildroot configuration file does not exist : "
 							+ buildrootConfigFilePath, e);
 		}
-		return configElements;
+		return (IManagedConfigElement[]) configElements
+				.toArray(new IManagedConfigElement[configElements.size()]);
 	}
 }

@@ -20,5 +20,9 @@
       class="org.buildroot.cdt.toolchain.DynamicToolchainProvider"
       name="DynamicToolchainProvider"/>
    </extension>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup></startup>
+   </extension>
 
 </plugin>
