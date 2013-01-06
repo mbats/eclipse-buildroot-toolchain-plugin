@@ -165,6 +165,12 @@ public class BuildrootToolchain extends BuildrootConfigElement {
 			addChildren(ccCompiler);
 			addChildren(ccLinker);
 		}
+		
+		// Create pkg-config
+		BuildrootTool pkgConfig = new BuildrootTool(path, prefix, architecture,
+				BuildrootToolType.PKG_CONFIG);
+		addChildren(pkgConfig);
+
 
 		// Create builder
 		BuildrootBuilder builder = new BuildrootBuilder(path, architecture);

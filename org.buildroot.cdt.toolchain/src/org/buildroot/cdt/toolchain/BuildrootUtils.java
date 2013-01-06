@@ -61,8 +61,27 @@ public class BuildrootUtils {
 	 */
 	public static boolean isCompilerAvailable(String path, String prefix,
 			String compilerName) {
-		File file = new File(getToolPath(prefix, path, compilerName));
+		File file = new File(getPrefixedToolPath(prefix, path, compilerName));
 		return file.exists();
+	}
+
+	/**
+	 * Get path of a buildroot tool prefixed by the host tuple (eg.
+	 * arm-linux-gnueabi).
+	 * 
+	 * @param prefix
+	 *            Toolchain prefix
+	 * @param pathStr
+	 *            Toolchain path
+	 * @param toolName
+	 *            Tool name
+	 * @return Path of tool
+	 */
+	public static String getPrefixedToolPath(String prefix, String pathStr,
+			String toolName) {
+		Path path = new Path(pathStr);
+		return ((Path) path.append("host/usr/bin/" + prefix + toolName))
+				.toString();
 	}
 
 	/**
@@ -76,18 +95,20 @@ public class BuildrootUtils {
 	 *            Tool name
 	 * @return Path of tool
 	 */
-	public static String getToolPath(String prefix, String pathStr,
-			String toolName) {
+	public static String getToolPath(String pathStr, String toolName) {
 		Path path = new Path(pathStr);
-		return ((Path) path.append("host/usr/bin/" + prefix + toolName))
-				.toString();
+		return ((Path) path.append("host/usr/bin/" + toolName)).toString();
 	}
-	
+
 	/**
 	 * Get tool name
-	 * @param architecture Toolchain architecture
-	 * @param path Toolchain path
-	 * @param toolDescription Tool description
+	 * 
+	 * @param architecture
+	 *            Toolchain architecture
+	 * @param path
+	 *            Toolchain path
+	 * @param toolDescription
+	 *            Tool description
 	 * @return
 	 */
 	public static String getToolName(String architecture, String path,

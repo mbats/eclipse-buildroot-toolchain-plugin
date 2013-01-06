@@ -11,7 +11,6 @@ package org.buildroot.cdt.toolchain.managedbuilder.toolchain;
 
 import org.buildroot.cdt.toolchain.BuildrootUtils;
 
-
 public class BuildrootTool extends BuildrootConfigElement {
 	private static final String SUPER_CLASS = "superClass";
 	private static final String NATURE_FILTER = "natureFilter";
@@ -24,30 +23,38 @@ public class BuildrootTool extends BuildrootConfigElement {
 	private String superClass;
 
 	/**
-	 * It exists 5 types of tool : assembler, compilers for C and C++, linkers
-	 * for C and C++.
+	 * It exists 6 types of tool : assembler, compilers for C and C++, linkers
+	 * for C and C++, pkg-config.
 	 * */
 	public enum BuildrootToolType {
-		ASSEMBLER, C_COMPILER, CC_COMPILER, C_LINKER, CC_LINKER
+		ASSEMBLER, C_COMPILER, CC_COMPILER, C_LINKER, CC_LINKER, PKG_CONFIG
 	}
 
 	/**
 	 * Buildroot tool constructor.
-	 * @param path Toolchain path
-	 * @param prefix Tool path prefix
-	 * @param architecture Toolchain architecture
-	 * @param toolType Tool type
+	 * 
+	 * @param path
+	 *            Toolchain path
+	 * @param prefix
+	 *            Tool path prefix
+	 * @param architecture
+	 *            Toolchain architecture
+	 * @param toolType
+	 *            Tool type
 	 */
 	public BuildrootTool(String path, String prefix, String architecture,
 			BuildrootToolType toolType) {
 		String toolName = null;
 		String idSuffix = null;
 		String toolDescription = null;
+		String toolPath = null;
 		switch (toolType) {
 		case ASSEMBLER:
 			this.superClass = "cdt.managedbuild.tool.gnu.assembler";
 			this.natureFilter = "both";
 			toolName = "as";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
 			idSuffix = "assembler";
 			toolDescription = "Assembler";
 			break;
@@ -56,6 +63,8 @@ public class BuildrootTool extends BuildrootConfigElement {
 			this.superClass = "cdt.managedbuild.tool.gnu.c.compiler";
 			this.natureFilter = "both";
 			toolName = "gcc";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
 			idSuffix = "c.compiler";
 			toolDescription = "C Compiler";
 			break;
@@ -64,6 +73,8 @@ public class BuildrootTool extends BuildrootConfigElement {
 			this.superClass = "cdt.managedbuild.tool.gnu.cpp.compiler";
 			this.natureFilter = "ccnature";
 			toolName = "g++";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
 			idSuffix = "cc.compiler";
 			toolDescription = "C++ Compiler";
 			break;
@@ -72,6 +83,8 @@ public class BuildrootTool extends BuildrootConfigElement {
 			this.superClass = "cdt.managedbuild.tool.gnu.c.linker";
 			this.natureFilter = "cnature";
 			toolName = "gcc";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
 			idSuffix = "c.linker";
 			toolDescription = "C Linker";
 			break;
@@ -80,17 +93,26 @@ public class BuildrootTool extends BuildrootConfigElement {
 			this.superClass = "cdt.managedbuild.tool.gnu.cpp.linker";
 			this.natureFilter = "ccnature";
 			toolName = "g++";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
 			idSuffix = "cc.linker";
 			toolDescription = "CC Linker";
 			break;
-
+		case PKG_CONFIG:
+			this.superClass = "org.eclipse.cdt.managedbuilder.pkgconfig.tool";
+			this.natureFilter = "both";
+			toolName = "pkg-config";
+			toolPath = BuildrootUtils.getToolPath(path, toolName);
+			idSuffix = "pkgconfig";
+			toolDescription = "Pkg config";
+			break;
 		default:
 			break;
 		}
-		String toolPath = BuildrootUtils.getToolPath(prefix, path, toolName);
 		this.command = toolPath;
 		this.id = getIdentifier(path, idSuffix);
-		this.name = BuildrootUtils.getToolName(architecture, path, toolDescription);
+		this.name = BuildrootUtils.getToolName(architecture, path,
+				toolDescription);
 
 		if (toolType == BuildrootToolType.C_COMPILER
 				|| toolType == BuildrootToolType.CC_COMPILER) {

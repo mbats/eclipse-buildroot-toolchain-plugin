@@ -25,7 +25,7 @@ public class BuildrootDebuggerConfig {
 	private String debugName;
 
 	public BuildrootDebuggerConfig(String prefix, String path) {
-		debugName = BuildrootUtils.getToolPath(prefix, path, "gdb");
+		debugName = BuildrootUtils.getPrefixedToolPath(prefix, path, "gdb");
 		solibPath = path + "/staging";
 	}
 }
