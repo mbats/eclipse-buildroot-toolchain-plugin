@@ -17,6 +17,8 @@ Once this plugin is installed in Eclipse, it will automatically make your Buildr
 
 In order for Buildroot toolchains to be visible, you must enable the `BR2_ECLIPSE_REGISTER` Buildroot option when building your project. The Eclipse plugin will then show all toolchains of Buildroot projects that had this option enabled.
 
+This plugin is typically used with the [Buildroot Eclipse bundle available](https://github.com/mbats/eclipse-buildroot-bundle), for which we provide [detailled installation and usage instructions](https://github.com/mbats/eclipse-buildroot-bundle/wiki).
+
 Implementation
 --------------
 
