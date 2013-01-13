@@ -1,4 +1,4 @@
-From 948bb92000bb9498cc59492a65835567c95f1cde Mon Sep 17 00:00:00 2001
+From 198c9948fa88ce4dfb3d9c38e5bcc15fdeade585 Mon Sep 17 00:00:00 2001
 From: Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
 Date: Sun, 13 May 2012 14:15:42 +0200
 Subject: [PATCH] Integration with Buildroot Toolchain Eclipse plugin
@@ -25,10 +25,10 @@ Signed-off-by: Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
  create mode 100755 support/scripts/eclipse-register-toolchain
 
 diff --git a/Makefile b/Makefile
-index f4f7514..e6c513a 100644
+index 074674a..70cb229 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -332,6 +332,10 @@ TARGETS+=target-generatelocales
+@@ -336,6 +336,10 @@ TARGETS+=target-generatelocales
  endif
  endif
  
@@ -39,12 +39,12 @@ index f4f7514..e6c513a 100644
  include fs/common.mk
  
  TARGETS_CLEAN:=$(patsubst %,%-clean,$(TARGETS))
-@@ -516,6 +520,9 @@ target-generatelocales: host-localedef
+@@ -531,6 +535,9 @@ target-generatelocales: host-localedef
  	done
  endif
  
 +toolchain-eclipse-register:
-+	./support/scripts/eclipse-register-toolchain $(realpath $(O)) $(notdir $(TARGET_CROSS)) $(BR2_ARCH)
++	./support/scripts/eclipse-register-toolchain `readlink -f $(O)` $(notdir $(TARGET_CROSS)) $(BR2_ARCH)
 +
  source: dirs $(TARGETS_SOURCE) $(HOST_SOURCE)
  
@@ -84,7 +84,7 @@ index 0000000..dd9f158
 +# Add the toolchain
 +echo "${project_directory}:${toolchain_prefix}:${architecture}" >> ${TOOLCHAIN_ECLIPSE_FILE}
 diff --git a/toolchain/toolchain-common.in b/toolchain/toolchain-common.in
-index 6e0d159..b288a99 100644
+index 9f11a39..f6905ae 100644
 --- a/toolchain/toolchain-common.in
 +++ b/toolchain/toolchain-common.in
 @@ -131,3 +131,10 @@ config BR2_TARGET_LDFLAGS
