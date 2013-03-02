@@ -14,17 +14,14 @@ import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootToolchain;
 
 /**
  * For each toolchain the followed configuration is generated dynamically :
- *    <configuration
- *          buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug"
- *          cleanCommand="rm -rf"
- *          id="com.analog.gnu.toolchain.blackfin.config.bfin.elf.exe.debug"
- *          name="%ConfigName.Dbg"
- *          parent="cdt.managedbuild.config.gnu.base">
- *       <toolChain
- *             id="com.analog.gnu.toolchain.blackfin.toolchain.bfin.elf.exe.debug"
- *             superClass="org.buildroot.cdt.toolchain.arm.linux.gnueabi.toolchain.base">
- *       </toolChain>
- *    </configuration>
+ * <configuration buildProperties=
+ * "org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug"
+ * cleanCommand="rm -rf"
+ * id="com.analog.gnu.toolchain.blackfin.config.bfin.elf.exe.debug"
+ * name="%ConfigName.Dbg" parent="cdt.managedbuild.config.gnu.base"> <toolChain
+ * id="com.analog.gnu.toolchain.blackfin.toolchain.bfin.elf.exe.debug"
+ * superClass="org.buildroot.cdt.toolchain.arm.linux.gnueabi.toolchain.base">
+ * </toolChain> </configuration>
  * 
  * @author Melanie Bats <melanie.bats@obeo.fr>
  */
@@ -41,12 +38,17 @@ public class BuildrootConfiguration extends BuildrootConfigElement {
 	 * Configuration identifier.
 	 */
 	private String id;
-	
+
 	/**
 	 * Configuration name.
 	 */
 	private String name;
-	
+
+	/**
+	 * Configuration type.
+	 */
+	private ConfigurationType configurationType;
+
 	/**
 	 * Buildroot configuration constructor.
 	 * 
@@ -62,6 +64,7 @@ public class BuildrootConfiguration extends BuildrootConfigElement {
 		id = getIdentifier(path, ".elf.exe."
 				+ configType.toString().toLowerCase());
 		name = configType.toString().toLowerCase();
+		configurationType = configType;
 		BuildrootToolchainRef toolchainRef = new BuildrootToolchainRef(path,
 				configType.toString().toLowerCase(), toolchain);
 		addChildren(toolchainRef);
@@ -75,7 +78,8 @@ public class BuildrootConfiguration extends BuildrootConfigElement {
 	@Override
 	public String getAttribute(String attribute) {
 		if ("buildProperties".equals(attribute)) {
-			return "org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug";
+			return "org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType."
+					+ configurationType.name().toLowerCase();
 		} else if ("cleanCommand".equals(attribute)) {
 			return "rm -rf";
 		} else if (ID.equals(attribute)) {
