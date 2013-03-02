@@ -9,14 +9,18 @@
  *******************************************************************************/
 package org.buildroot.cdt.toolchain.managedbuilder.projecttype;
 
+import org.buildroot.cdt.toolchain.DynamicToolchainProvider.BuildArtefactType;
+import org.buildroot.cdt.toolchain.managedbuilder.projecttype.BuildrootConfiguration.ConfigurationType;
 import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootConfigElement;
 import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootToolchain;
 
 /**
- * For each toolchain the followed toolchain reference is generated dynamically :
- * <toolChain id="com.analog.gnu.toolchain.blackfin.toolchain.bfin.elf.exe.debug"
- *		superClass="org.buildroot.cdt.toolchain.arm.linux.gnueabi.toolchain.base">
+ * For each toolchain the followed toolchain reference is generated dynamically
+ * : <toolChain
+ * id="com.analog.gnu.toolchain.blackfin.toolchain.bfin.elf.exe.debug"
+ * superClass="org.buildroot.cdt.toolchain.arm.linux.gnueabi.toolchain.base">
  * </toolChain>
+ * 
  * @author Melanie Bats <melanie.bats@obeo.fr>
  */
 public class BuildrootToolchainRef extends BuildrootConfigElement {
@@ -34,14 +38,18 @@ public class BuildrootToolchainRef extends BuildrootConfigElement {
 	 * 
 	 * @param path
 	 *            Toolchain path
-	 * @param suffix
-	 *            Toolchain refrence identifier suffix
+	 * @param configType
+	 *            Configuration type
 	 * @param toolchain
 	 *            Referenced toolchain
+	 * @param buildArtefactType
+	 *            Build artefact type
 	 */
-	public BuildrootToolchainRef(final String path, String suffix,
-			BuildrootToolchain toolchain) {
-		id = getIdentifier(path, ".elf.exe." + suffix);
+	public BuildrootToolchainRef(final String path,
+			ConfigurationType configType, BuildrootToolchain toolchain,
+			BuildArtefactType buildArtefactType) {
+		id = getIdentifier(path, buildArtefactType.getValue() + "."
+				+ configType.name().toLowerCase());
 		superClass = toolchain.getIdentifier();
 	}
 

@@ -9,6 +9,7 @@
  *******************************************************************************/
 package org.buildroot.cdt.toolchain.managedbuilder.projecttype;
 
+import org.buildroot.cdt.toolchain.DynamicToolchainProvider.BuildArtefactType;
 import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootConfigElement;
 import org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootToolchain;
 
@@ -58,15 +59,17 @@ public class BuildrootConfiguration extends BuildrootConfigElement {
 	 *            Configuration type
 	 * @param toolchain
 	 *            Referenced toolchain
+	 * @param buildArtefactType
+	 *            Build artefact type
 	 */
 	public BuildrootConfiguration(String path, ConfigurationType configType,
-			BuildrootToolchain toolchain) {
-		id = getIdentifier(path, ".elf.exe."
+			BuildrootToolchain toolchain, BuildArtefactType buildArtefactType) {
+		id = getIdentifier(path, buildArtefactType.getValue() + "."
 				+ configType.toString().toLowerCase());
 		name = configType.toString().toLowerCase();
 		configurationType = configType;
 		BuildrootToolchainRef toolchainRef = new BuildrootToolchainRef(path,
-				configType.toString().toLowerCase(), toolchain);
+				configType, toolchain, buildArtefactType);
 		addChildren(toolchainRef);
 	}
 

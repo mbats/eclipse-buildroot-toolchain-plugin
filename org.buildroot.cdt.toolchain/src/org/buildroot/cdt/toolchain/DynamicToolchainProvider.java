@@ -33,6 +33,20 @@ import org.eclipse.cdt.managedbuilder.core.IManagedConfigElementProvider;
  */
 public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 
+	public enum BuildArtefactType {
+		CDT_EXE("exe"), CDT_SHARED_LIBRARY("sharedLib"), CDT_STATIC_LIBRARY(
+				"staticLib");
+		String value;
+
+		private BuildArtefactType(String val) {
+			value = val;
+		}
+
+		public String getValue() {
+			return value;
+		}
+	}
+
 	@Override
 	public IManagedConfigElement[] getConfigElements() {
 		// When a Buildroot project is built with BR2_ECLIPSE_REGISTER, it adds
@@ -171,9 +185,12 @@ public class DynamicToolchainProvider implements IManagedConfigElementProvider {
 				configElements.add(toolchain);
 
 				// Create projectType
-				BuildrootProjectType projectType = new BuildrootProjectType(
-						path, toolchain);
-				configElements.add(projectType);
+				for (BuildArtefactType buildArtefactType : BuildArtefactType
+						.values()) {
+					BuildrootProjectType projectType = new BuildrootProjectType(
+							path, toolchain, buildArtefactType);
+					configElements.add(projectType);
+				}
 
 				// Create launch configuration
 				BuildrootLaunchConfiguration launchConfiguration = new BuildrootLaunchConfiguration(
