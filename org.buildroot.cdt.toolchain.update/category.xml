@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/org.buildroot.cdt.toolchain.feature_1.0.0.qualifier.jar" id="org.buildroot.cdt.toolchain.feature" version="1.0.0.qualifier">
+   <feature id="org.buildroot.cdt.toolchain.feature" version="0.0.0">
       <category name="Buildroot"/>
    </feature>
    <category-def name="Buildroot" label="Buildroot"/>
