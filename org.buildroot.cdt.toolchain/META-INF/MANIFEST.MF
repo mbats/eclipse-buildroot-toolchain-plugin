@@ -6,7 +6,9 @@ Bundle-Version: 1.0.1.qualifier
 Bundle-Activator: org.buildroot.cdt.toolchain.BuildrootActivator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
- org.eclipse.cdt.managedbuilder.core
+ org.eclipse.cdt.managedbuilder.core,
+ org.eclipse.cdt.core;bundle-version="5.4.1",
+ org.eclipse.core.resources;bundle-version="3.8.1"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-Vendor: Buildroot Project

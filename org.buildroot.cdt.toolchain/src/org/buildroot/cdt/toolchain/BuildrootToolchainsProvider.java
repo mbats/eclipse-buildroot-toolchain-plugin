@@ -172,11 +172,15 @@ public class BuildrootToolchainsProvider implements IStartup {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append("<toolChain");
 		buffer.append(" archList=\"all\"");
+		buffer.append(" configurationEnvironmentSupplier=\"org.buildroot.cdt.toolchain.BuildrootCrossEnvironmentVariableSupplier\"");
 		buffer.append(" id=\"" + getToolchainIdentifier(path) + "\"");
 		buffer.append(" isAbstract=\"false\"");
 		buffer.append(" name=\""
 				+ BuildrootUtils.getToolName(architecture, path, null) + "\"");
 		buffer.append(" osList=\"linux\">");
+
+		// Create options and option category
+		buffer.append(createPathOption(path));
 
 		// Create target platform
 		buffer.append(createTargetPlatform(path, architecture));
@@ -209,6 +213,26 @@ public class BuildrootToolchainsProvider implements IStartup {
 		// Create builder
 		buffer.append(createBuilder(path, architecture));
 		buffer.append("</toolChain>");
+		return buffer;
+	}
+
+	private StringBuffer createPathOption(String path) {
+		StringBuffer buffer = new StringBuffer();
+		String optionCategoryId = getIdentifier(path, "optionCategory");
+		buffer.append("<option");
+		buffer.append(" category=\"" + optionCategoryId + "\"");
+		buffer.append(" id=\"" + getToolchainIdentifier(path) + ".option.path"
+				+ "\"");
+		buffer.append(" isAbstract=\"false\"");
+		buffer.append(" name=\"Path\"");
+		buffer.append(" resourceFilter=\"all\"");
+		buffer.append(" value=\"" + path + "/bin\"");
+		buffer.append(" valueType=\"string\">");
+		buffer.append("</option>");
+		buffer.append("<optionCategory");
+		buffer.append(" id=\"" + optionCategoryId + "\"");
+		buffer.append(" name=\"Generic Buildroot Settings\">");
+		buffer.append("</optionCategory>");
 		return buffer;
 	}
 
