@@ -7,10 +7,8 @@
  * Contributors:
  *     Melanie Bats <melanie.bats@obeo.fr> - Initial contribution
  *******************************************************************************/
-package org.buildroot.cdt.toolchain.launch;
+package org.buildroot.cdt.toolchain;
 
-import org.buildroot.cdt.toolchain.BuildrootActivator;
-import org.buildroot.cdt.toolchain.BuildrootUtils;
 
 public class BuildrootLaunchConfiguration {
 
@@ -65,8 +63,7 @@ public class BuildrootLaunchConfiguration {
 		BuildrootUtils.registerExtensionPoint(buffer);
 
 		// Register the debugger configuration
-		BuildrootActivator.registerDebuggerConfiguration(architecture, prefix,
-				path);
+		BuildrootActivator.registerDebuggerConfiguration(architecture, prefix, path);
 	}
 
 	public String getLaunchConfigTypeId() {

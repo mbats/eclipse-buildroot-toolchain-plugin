@@ -7,9 +7,7 @@
  * Contributors:
  *     Melanie Bats <melanie.bats@obeo.fr> - Initial contribution
  *******************************************************************************/
-package org.buildroot.cdt.toolchain.launch;
-
-import org.buildroot.cdt.toolchain.BuildrootUtils;
+package org.buildroot.cdt.toolchain;
 
 public class BuildrootDebuggerConfig {
 	private String solibPath;
