@@ -100,17 +100,170 @@ public class BuildrootToolchainsProvider implements IStartup {
 		// Create toolchain
 		buffer.append(createToolchain(path, prefix, architecture));
 
-		// Create project types
+		// Create executable, static lib and shared lib project types
 		for (BuildArtefactType buildArtefactType : BuildArtefactType.values()) {
 			buffer.append(createProjectType(path, prefix, architecture,
 					buildArtefactType));
 		}
+
+		// Create Autotools toolchain
+		buffer.append(createAutotoolsToolchain(path, prefix, architecture));
+
+		// Create Autotools project type
+		buffer.append(createAutotoolsProjectType(path, prefix, architecture));
+
 		buffer.append("</extension>");
 
 		buffer.append("</plugin>");
 
 		// Register this extension dynamically
 		BuildrootUtils.registerExtensionPoint(buffer);
+	}
+
+	private StringBuffer createAutotoolsToolchain(String path, String prefix,
+			String architecture) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("<toolChain");
+		buffer.append(" archList=\"all\"");
+		buffer.append(" configurationEnvironmentSupplier=\"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier\"");
+		buffer.append(" id=\"" + getAutotoolsToolchainIdentifier(path) + "\"");
+		buffer.append(" isAbstract=\"false\"");
+		buffer.append(" name=\"Autotools "
+				+ BuildrootUtils.getToolName(architecture, path, null) + "\"");
+		buffer.append(" osList=\"linux\"");
+		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.toolChain\">");
+
+		// Create options and option category
+		buffer.append(createOptions(path, prefix,
+				getAutotoolsToolchainIdentifier(path)));
+
+		// Create configure
+		buffer.append(createConfigureTool(path, prefix, architecture));
+
+		// Create tools
+		buffer.append(createAutotoolsTool(path, prefix, architecture,
+				BuildrootToolType.C_COMPILER));
+		buffer.append(createAutotoolsTool(path, prefix, architecture,
+				BuildrootToolType.CC_COMPILER));
+
+		buffer.append("</toolChain>");
+		return buffer;
+	}
+
+	private Object createAutotoolsTool(String path, String prefix,
+			String architecture, BuildrootToolType toolType) {
+
+		String toolName = null;
+		String toolchainSuffix = null;
+		String idSuffix = null;
+		String toolDescription = null;
+		String toolPath = null;
+		String natureFilter = null;
+		switch (toolType) {
+		case C_COMPILER:
+			natureFilter = "both";
+			toolName = "gcc";
+			toolchainSuffix = "gcc";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
+			idSuffix = "autotools.c.compiler";
+			toolDescription = "C Compiler";
+			break;
+
+		case CC_COMPILER:
+			natureFilter = "ccnature";
+			toolName = "g++";
+			toolchainSuffix = "gpp";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
+			idSuffix = "autotools.cc.compiler";
+			toolDescription = "C++ Compiler";
+			break;
+		default:
+			break;
+		}
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("<tool");
+		buffer.append(" command=\"" + toolPath + "\"");
+		buffer.append(" commandLineGenerator=\"org.eclipse.cdt.managedbuilder.internal.core.ManagedCommandLineGenerator\"");
+		buffer.append(" id=\"" + getIdentifier(path, idSuffix) + "\"");
+		buffer.append(" isAbstract=\"false\"");
+		buffer.append(" name=\"Autotools "
+				+ BuildrootUtils.getToolName(architecture, path,
+						toolDescription) + "\"");
+		buffer.append(" natureFilter=\"" + natureFilter + "\"");
+		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool."
+				+ toolchainSuffix + "\">");
+		buffer.append("<inputType ");
+		buffer.append(" superClass=\"cdt.managedbuild.tool.gnu.c.compiler.input\" ");
+		buffer.append(" id=\""
+				+ getIdentifier(path, toolType.name().toLowerCase() + ".input")
+				+ "\" ");
+		buffer.append(" scannerConfigDiscoveryProfileId=\""
+				+ getScannerConfigProfileId(path, architecture, toolType)
+				+ "\"/>");
+		buffer.append("</tool>");
+		return buffer;
+	}
+
+	private StringBuffer createConfigureTool(String path, String prefix,
+			String architecture) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("<tool");
+		buffer.append(" id=\""
+				+ getIdentifier(path, "autotools.tool.configure") + "\"");
+		buffer.append(" isAbstract=\"false\"");
+		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.tool.configure\">");
+		buffer.append("<option");
+		buffer.append(" defaultValue=\""
+				+ prefix.substring(0, prefix.length() - 1) + "\"");
+		buffer.append(" id=\""
+				+ getIdentifier(path, "autotools.toolChain.option.host") + "\"");
+		buffer.append(" isAbstract=\"false\"");
+		buffer.append(" name=\"Host\"");
+		buffer.append(" resourceFilter=\"all\"");
+		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.option.configure.host\"");
+		buffer.append(" valueType=\"string\">");
+		buffer.append("</option>");
+		buffer.append("</tool>");
+		return buffer;
+	}
+
+	private StringBuffer createAutotoolsProjectType(String path, String prefix,
+			String architecture) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("<projectType");
+		buffer.append(" buildArtefactType=\"org.eclipse.linuxtools.cdt.autotools.core.buildArtefactType.autotools\"");
+		buffer.append(" id=\"" + getIdentifier(path, "autotools") + "\"");
+		buffer.append(" isAbstract=\"false\">");
+		// Create default configuration
+		buffer.append(createAutotoolsConfiguration(path));
+		buffer.append(" </projectType>");
+		return buffer;
+	}
+
+	private StringBuffer createAutotoolsConfiguration(String path) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append(" <configuration");
+		buffer.append(" buildProperties=\"org.eclipse.linuxtools.cdt.autotools.core.buildType.default\"");
+		buffer.append(" id=\"" + getIdentifier(path, "autotools.default")
+				+ "\"");
+		buffer.append(" name=\"Configuration\"");
+		buffer.append(" parent=\"org.eclipse.linuxtools.cdt.autotools.core.configuration.build\">");
+		buffer.append(createAutotoolsToolchainRef(path));
+		buffer.append(" </configuration>");
+		return buffer;
+	}
+
+	private StringBuffer createAutotoolsToolchainRef(String path) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("<toolChain");
+		buffer.append(" id=\"" + getIdentifier(path, "autotools.default")
+				+ "\"");
+		buffer.append(" superClass=\"" + getAutotoolsToolchainIdentifier(path)
+				+ "\">");
+		buffer.append("</toolChain>");
+		return buffer;
 	}
 
 	private StringBuffer createProjectType(String path, String prefix,
@@ -124,7 +277,7 @@ public class BuildrootToolchainsProvider implements IStartup {
 				+ "\"");
 		buffer.append(" isAbstract=\"false\"");
 		buffer.append(" isTest=\"false\"");
-		buffer.append(" projectEnvironmentSupplier=\"org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootCrossEnvironmentVariableSupplier\">");
+		buffer.append(" projectEnvironmentSupplier=\"org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootEnvironmentVariableSupplier\">");
 
 		// Create debug configuration
 		buffer.append(createConfiguration(path, ConfigurationType.DEBUG,
@@ -172,7 +325,7 @@ public class BuildrootToolchainsProvider implements IStartup {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append("<toolChain");
 		buffer.append(" archList=\"all\"");
-		buffer.append(" configurationEnvironmentSupplier=\"org.buildroot.cdt.toolchain.BuildrootCrossEnvironmentVariableSupplier\"");
+		buffer.append(" configurationEnvironmentSupplier=\"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier\"");
 		buffer.append(" id=\"" + getToolchainIdentifier(path) + "\"");
 		buffer.append(" isAbstract=\"false\"");
 		buffer.append(" name=\""
@@ -180,7 +333,7 @@ public class BuildrootToolchainsProvider implements IStartup {
 		buffer.append(" osList=\"linux\">");
 
 		// Create options and option category
-		buffer.append(createPathOption(path));
+		buffer.append(createOptions(path, prefix, getToolchainIdentifier(path)));
 
 		// Create target platform
 		buffer.append(createTargetPlatform(path, architecture));
@@ -216,28 +369,55 @@ public class BuildrootToolchainsProvider implements IStartup {
 		return buffer;
 	}
 
-	private StringBuffer createPathOption(String path) {
+	private StringBuffer createOptions(String path, String prefix,
+			String toolchainId) {
 		StringBuffer buffer = new StringBuffer();
-		String optionCategoryId = getIdentifier(path, "optionCategory");
-		buffer.append("<option");
-		buffer.append(" category=\"" + optionCategoryId + "\"");
-		buffer.append(" id=\"" + getToolchainIdentifier(path) + ".option.path"
-				+ "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\"Path\"");
-		buffer.append(" resourceFilter=\"all\"");
-		buffer.append(" value=\"" + path + "/bin\"");
-		buffer.append(" valueType=\"string\">");
-		buffer.append("</option>");
+		String optionCategoryId = toolchainId + ".optionCategory";
 		buffer.append("<optionCategory");
 		buffer.append(" id=\"" + optionCategoryId + "\"");
 		buffer.append(" name=\"Generic Buildroot Settings\">");
 		buffer.append("</optionCategory>");
+		buffer.append(createPathOption(path, toolchainId, optionCategoryId));
+		buffer.append(createPrefixOption(prefix, toolchainId, optionCategoryId));
+		return buffer;
+	}
+
+	private StringBuffer createPathOption(String path, String toolchainId,
+			String optionCategoryId) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("<option");
+		buffer.append(" category=\"" + optionCategoryId + "\"");
+		buffer.append(" id=\"" + toolchainId + ".option.path" + "\"");
+		buffer.append(" isAbstract=\"false\"");
+		buffer.append(" name=\"Path\"");
+		buffer.append(" resourceFilter=\"all\"");
+		buffer.append(" value=\"" + path + "/host/usr/bin\"");
+		buffer.append(" valueType=\"string\">");
+		buffer.append("</option>");
+		return buffer;
+	}
+
+	private StringBuffer createPrefixOption(String prefix, String toolchainId,
+			String optionCategoryId) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("<option");
+		buffer.append(" category=\"" + optionCategoryId + "\"");
+		buffer.append(" id=\"" + toolchainId + ".option.prefix" + "\"");
+		buffer.append(" isAbstract=\"false\"");
+		buffer.append(" name=\"Path\"");
+		buffer.append(" resourceFilter=\"all\"");
+		buffer.append(" value=\"" + prefix + "\"");
+		buffer.append(" valueType=\"string\">");
+		buffer.append("</option>");
 		return buffer;
 	}
 
 	private String getToolchainIdentifier(String path) {
 		return getIdentifier(path, ".toolchain.base");
+	}
+
+	private String getAutotoolsToolchainIdentifier(String path) {
+		return getIdentifier(path, ".autotools.toolchain.base");
 	}
 
 	private StringBuffer createBuilder(String path, String architecture) {
