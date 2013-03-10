@@ -2,7 +2,7 @@
 <feature
       id="org.buildroot.cdt.toolchain.feature"
       label="Buildroot Toolchain"
-      version="1.0.1.qualifier"
+      version="2.0.0.qualifier"
       provider-name="Buildroot Project">
 
    <description url="https://github.com/mbats/eclipse-buildroot-toolchain-plugin">
