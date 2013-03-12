@@ -3,5 +3,8 @@
    <feature id="org.buildroot.cdt.toolchain.feature" version="0.0.0">
       <category name="Buildroot"/>
    </feature>
+   <feature url="features/org.eclipse.cdt.autotools.feature.patch_1.0.0.jar" id="org.eclipse.cdt.autotools.feature.patch" version="1.0.0" patch="true">
+      <category name="Buildroot"/>
+   </feature>
    <category-def name="Buildroot" label="Buildroot"/>
 </site>

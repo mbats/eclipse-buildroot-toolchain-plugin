@@ -36,6 +36,8 @@
 		<module>../org.buildroot.cdt.toolchain</module>
 		<module>../org.buildroot.cdt.toolchain.feature</module>
 		<module>../org.buildroot.cdt.toolchain.update</module>
+		
+		<module>../org.eclipse.cdt.autotools.feature.patch</module>
 	</modules>
 
 	<!-- Repositories providing the context of the build -->
