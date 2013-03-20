@@ -7,8 +7,16 @@ Bundle-Activator: org.buildroot.cdt.toolchain.BuildrootActivator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.cdt.managedbuilder.core,
- org.eclipse.cdt.core;bundle-version="5.4.1",
- org.eclipse.core.resources;bundle-version="3.8.1"
+ org.eclipse.cdt.core,
+ org.eclipse.core.resources,
+ org.eclipse.debug.core,
+ org.eclipse.cdt.launch.remote,
+ org.eclipse.debug.ui,
+ org.eclipse.cdt.debug.core,
+ org.eclipse.cdt.debug.ui,
+ org.eclipse.cdt.launch,
+ org.eclipse.cdt.debug.mi.core,
+ org.eclipse.cdt.managedbuilder.pkgconfig
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-Vendor: Buildroot Project

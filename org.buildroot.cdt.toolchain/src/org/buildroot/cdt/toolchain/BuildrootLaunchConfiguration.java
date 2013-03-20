@@ -44,7 +44,7 @@ public class BuildrootLaunchConfiguration {
 		buffer.append(" <extension");
 		buffer.append("  point=\"org.eclipse.debug.ui.launchConfigurationTabGroups\">");
 		buffer.append("  <launchConfigurationTabGroup");
-		buffer.append("   class=\"org.buildroot.cdt.toolchain.launch.BuildrootLaunchConfigurationTabGroup\"");
+		buffer.append("   class=\"org.buildroot.cdt.toolchain.BuildrootLaunchConfigurationTabGroup\"");
 		buffer.append("   id=\"" + getLaunchConfigTabGroupId() + "\"");
 		buffer.append("   type=\"" + getLaunchConfigTypeId() + "\">");
 		buffer.append("  </launchConfigurationTabGroup>");
