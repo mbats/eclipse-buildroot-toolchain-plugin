@@ -6,10 +6,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import org.buildroot.cdt.toolchain.BuildrootConfigElement.ManagedConfigElement;
+import org.buildroot.cdt.toolchain.BuildrootConfigElement.ManagedConfigElementAttribute;
 import org.eclipse.cdt.managedbuilder.core.IManagedConfigElement;
-import org.eclipse.ui.IStartup;
+import org.eclipse.cdt.managedbuilder.core.IManagedConfigElementProvider;
 
-public class BuildrootToolchainsProvider implements IStartup {
+public class BuildrootToolchainsProvider implements
+		IManagedConfigElementProvider {
+
+	private static final String STRING = "string";
+	private static final String ALL = "all";
+	private static final String FALSE = "false";
+
 	private enum BuildArtefactType {
 		CDT_EXE("exe"), CDT_SHARED_LIBRARY("sharedLib"), CDT_STATIC_LIBRARY(
 				"staticLib");
@@ -41,7 +49,7 @@ public class BuildrootToolchainsProvider implements IStartup {
 	}
 
 	@Override
-	public void earlyStartup() {
+	public IManagedConfigElement[] getConfigElements() {
 		// When a Buildroot project is built with BR2_ECLIPSE_REGISTER, it adds
 		// a few information describing the generated toolchain into
 		// $HOME/.buildroot-eclipse.toolchains.
@@ -50,10 +58,18 @@ public class BuildrootToolchainsProvider implements IStartup {
 
 		// Parse the build configuration and provide dynamically the
 		// configuration information to CDT
-		parseBuildrootConfiguration(buildrootConfigFilePath);
+		return parseBuildrootConfiguration(buildrootConfigFilePath);
 	}
 
-	private void parseBuildrootConfiguration(String buildrootConfigFilePath) {
+	/**
+	 * Parse the buildroot configuration file to create project types.
+	 * 
+	 * @param buildrootConfigFilePath
+	 *            Path to the buildroot configuration file
+	 * @return List of CDT configuration elements
+	 */
+	private IManagedConfigElement[] parseBuildrootConfiguration(
+			String buildrootConfigFilePath) {
 		File file = new File(buildrootConfigFilePath);
 		Scanner input;
 		List<IManagedConfigElement> configElements = new ArrayList<IManagedConfigElement>();
@@ -72,7 +88,8 @@ public class BuildrootToolchainsProvider implements IStartup {
 				if (!BuildrootUtils.isCompilerAvailable(path, prefix, "gcc"))
 					continue;
 
-				registerBuildrootToolchains(path, prefix, architecture);
+				configElements.addAll(registerBuildrootToolchains(path, prefix,
+						architecture));
 
 				// Create launch configuration
 				BuildrootLaunchConfiguration launchConfiguration = new BuildrootLaunchConfiguration(
@@ -86,72 +103,72 @@ public class BuildrootToolchainsProvider implements IStartup {
 					"Buildroot configuration file does not exist : "
 							+ buildrootConfigFilePath, e);
 		}
+		return (IManagedConfigElement[]) configElements
+				.toArray(new IManagedConfigElement[configElements.size()]);
 	}
 
-	private void registerBuildrootToolchains(String path, String prefix,
-			String architecture) {
-		StringBuffer buffer = new StringBuffer(
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-		buffer.append("<?eclipse version=\"3.4\"?>");
-		buffer.append("<plugin>");
-		buffer.append("<extension");
-		buffer.append(" point=\"org.eclipse.cdt.managedbuilder.core.buildDefinitions\">");
+	private List<IManagedConfigElement> registerBuildrootToolchains(
+			String path, String prefix, String architecture) {
+		List<IManagedConfigElement> configElements = new ArrayList<IManagedConfigElement>();
 
 		// Create toolchain
-		buffer.append(createToolchain(path, prefix, architecture));
+		configElements.add(createToolchain(path, prefix, architecture));
 
 		// Create executable, static lib and shared lib project types
 		for (BuildArtefactType buildArtefactType : BuildArtefactType.values()) {
-			buffer.append(createProjectType(path, prefix, architecture,
+			configElements.add(createProjectType(path, prefix, architecture,
 					buildArtefactType));
 		}
 
 		// Create Autotools toolchain
-		buffer.append(createAutotoolsToolchain(path, prefix, architecture));
+		configElements
+				.add(createAutotoolsToolchain(path, prefix, architecture));
 
 		// Create Autotools project type
-		buffer.append(createAutotoolsProjectType(path, prefix, architecture));
+		configElements.add(createAutotoolsProjectType(path, prefix,
+				architecture));
 
-		buffer.append("</extension>");
-
-		buffer.append("</plugin>");
-
-		// Register this extension dynamically
-		BuildrootUtils.registerExtensionPoint(buffer);
+		return configElements;
 	}
 
-	private StringBuffer createAutotoolsToolchain(String path, String prefix,
-			String architecture) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<toolChain");
-		buffer.append(" archList=\"all\"");
-		buffer.append(" configurationEnvironmentSupplier=\"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier\"");
-		buffer.append(" id=\"" + getAutotoolsToolchainIdentifier(path) + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\"Autotools "
-				+ BuildrootUtils.getToolName(architecture, path, null) + "\"");
-		buffer.append(" osList=\"linux\"");
-		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.toolChain\">");
+	private IManagedConfigElement createAutotoolsToolchain(String path,
+			String prefix, String architecture) {
+		BuildrootConfigElement toolchain = new BuildrootConfigElement(
+				ManagedConfigElement.TOOLCHAIN);
+		toolchain.setAttribute(ManagedConfigElementAttribute.archList, ALL);
+		toolchain
+				.setAttribute(
+						ManagedConfigElementAttribute.configurationEnvironmentSupplier,
+						"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier");
+		toolchain.setAttribute(ManagedConfigElementAttribute.id,
+				getAutotoolsToolchainIdentifier(path));
+		toolchain
+				.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		toolchain.setAttribute(ManagedConfigElementAttribute.name, "Autotools "
+				+ BuildrootUtils.getToolName(architecture, path, null));
+		toolchain.setAttribute(ManagedConfigElementAttribute.osList,
+				BuildrootConfigElement.LINUX);
+		toolchain.setAttribute(ManagedConfigElementAttribute.superClass,
+				"org.eclipse.linuxtools.cdt.autotools.core.toolChain");
 
 		// Create options and option category
-		buffer.append(createOptions(path, prefix,
+		toolchain.addChildren(createOptions(path, prefix,
 				getAutotoolsToolchainIdentifier(path)));
 
 		// Create configure
-		buffer.append(createConfigureTool(path, prefix, architecture));
+		toolchain.addChild(createConfigureTool(path, prefix, architecture));
 
 		// Create tools
-		buffer.append(createAutotoolsTool(path, prefix, architecture,
+		toolchain.addChild(createAutotoolsTool(path, prefix, architecture,
 				BuildrootToolType.C_COMPILER));
-		buffer.append(createAutotoolsTool(path, prefix, architecture,
+		toolchain.addChild(createAutotoolsTool(path, prefix, architecture,
 				BuildrootToolType.CC_COMPILER));
 
-		buffer.append("</toolChain>");
-		return buffer;
+		return toolchain;
 	}
 
-	private Object createAutotoolsTool(String path, String prefix,
-			String architecture, BuildrootToolType toolType) {
+	private IManagedConfigElement createAutotoolsTool(String path,
+			String prefix, String architecture, BuildrootToolType toolType) {
 
 		String toolName = null;
 		String toolchainSuffix = null;
@@ -182,234 +199,280 @@ public class BuildrootToolchainsProvider implements IStartup {
 		default:
 			break;
 		}
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<tool");
-		buffer.append(" command=\"" + toolPath + "\"");
-		buffer.append(" commandLineGenerator=\"org.eclipse.cdt.managedbuilder.internal.core.ManagedCommandLineGenerator\"");
-		buffer.append(" id=\"" + getIdentifier(path, idSuffix) + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\"Autotools "
-				+ BuildrootUtils.getToolName(architecture, path,
-						toolDescription) + "\"");
-		buffer.append(" natureFilter=\"" + natureFilter + "\"");
-		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool."
-				+ toolchainSuffix + "\">");
-		buffer.append("<inputType ");
-		buffer.append(" superClass=\"cdt.managedbuild.tool.gnu.c.compiler.input\" ");
-		buffer.append(" id=\""
-				+ getIdentifier(path, toolType.name().toLowerCase() + ".input")
-				+ "\" ");
-		buffer.append(" scannerConfigDiscoveryProfileId=\""
-				+ getScannerConfigProfileId(path, architecture, toolType)
-				+ "\"/>");
-		buffer.append("</tool>");
-		return buffer;
+		BuildrootConfigElement tool = new BuildrootConfigElement(
+				ManagedConfigElement.TOOL);
+		tool.setAttribute(ManagedConfigElementAttribute.command, toolPath);
+		tool.setAttribute(
+				ManagedConfigElementAttribute.commandLineGenerator,
+				BuildrootConfigElement.CDT_MANAGEDBUILDER_COMMAND_LINE_GENERATOR);
+		tool.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, idSuffix));
+		tool.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		tool.setAttribute(
+				ManagedConfigElementAttribute.name,
+				"Autotools "
+						+ BuildrootUtils.getToolName(architecture, path,
+								toolDescription));
+		tool.setAttribute(ManagedConfigElementAttribute.natureFilter,
+				natureFilter);
+		tool.setAttribute(ManagedConfigElementAttribute.superClass,
+				"org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool."
+						+ toolchainSuffix);
+
+		BuildrootConfigElement inputType = new BuildrootConfigElement(
+				ManagedConfigElement.INPUT_TYPE);
+		inputType.setAttribute(ManagedConfigElementAttribute.superClass,
+				BuildrootConfigElement.CDT_MANAGEDBUILD_C_COMPILER_INPUT);
+		inputType.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, toolType.name().toLowerCase() + ".input"));
+		inputType.setAttribute(ManagedConfigElementAttribute.scannerConfigDiscoveryProfileId,
+				getScannerConfigProfileId(path, architecture, toolType));
+
+		tool.addChild(inputType);
+
+		return tool;
 	}
 
-	private StringBuffer createConfigureTool(String path, String prefix,
-			String architecture) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<tool");
-		buffer.append(" id=\""
-				+ getIdentifier(path, "autotools.tool.configure") + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.tool.configure\">");
-		buffer.append("<option");
-		buffer.append(" defaultValue=\""
-				+ prefix.substring(0, prefix.length() - 1) + "\"");
-		buffer.append(" id=\""
-				+ getIdentifier(path, "autotools.toolChain.option.host") + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\"Host\"");
-		buffer.append(" resourceFilter=\"all\"");
-		buffer.append(" superClass=\"org.eclipse.linuxtools.cdt.autotools.core.option.configure.host\"");
-		buffer.append(" valueType=\"string\">");
-		buffer.append("</option>");
-		buffer.append("</tool>");
-		return buffer;
+	private IManagedConfigElement createConfigureTool(String path,
+			String prefix, String architecture) {
+		BuildrootConfigElement tool = new BuildrootConfigElement(
+				ManagedConfigElement.TOOL);
+		tool.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, "autotools.tool.configure"));
+		tool.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		tool.setAttribute(ManagedConfigElementAttribute.superClass,
+				"org.eclipse.linuxtools.cdt.autotools.core.tool.configure");
+
+		BuildrootConfigElement option = new BuildrootConfigElement(
+				ManagedConfigElement.OPTION);
+		option.setAttribute(ManagedConfigElementAttribute.defaultValue,
+				prefix.substring(0, prefix.length() - 1));
+		option.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, "autotools.toolChain.option.host"));
+		option.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		option.setAttribute(ManagedConfigElementAttribute.name, "Host");
+		option.setAttribute(ManagedConfigElementAttribute.resourceFilter, ALL);
+		option.setAttribute(ManagedConfigElementAttribute.superClass,
+				"org.eclipse.linuxtools.cdt.autotools.core.option.configure.host");
+		option.setAttribute(ManagedConfigElementAttribute.valueType, STRING);
+		tool.addChild(option);
+
+		return tool;
 	}
 
-	private StringBuffer createAutotoolsProjectType(String path, String prefix,
-			String architecture) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<projectType");
-		buffer.append(" buildArtefactType=\"org.eclipse.linuxtools.cdt.autotools.core.buildArtefactType.autotools\"");
-		buffer.append(" id=\"" + getIdentifier(path, "autotools") + "\"");
-		buffer.append(" isAbstract=\"false\">");
+	private IManagedConfigElement createAutotoolsProjectType(String path,
+			String prefix, String architecture) {
+		BuildrootConfigElement projectType = new BuildrootConfigElement(
+				ManagedConfigElement.PROJECT_TYPE);
+		projectType
+				.setAttribute(
+						ManagedConfigElementAttribute.buildArtefactType,
+						"org.eclipse.linuxtools.cdt.autotools.core.buildArtefactType.autotools");
+		projectType.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, "autotools"));
+		projectType.setAttribute(ManagedConfigElementAttribute.isAbstract,
+				FALSE);
+
 		// Create default configuration
-		buffer.append(createAutotoolsConfiguration(path));
-		buffer.append(" </projectType>");
-		return buffer;
+		projectType.addChild(createAutotoolsConfiguration(path));
+		return projectType;
 	}
 
-	private StringBuffer createAutotoolsConfiguration(String path) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append(" <configuration");
-		buffer.append(" buildProperties=\"org.eclipse.linuxtools.cdt.autotools.core.buildType.default\"");
-		buffer.append(" id=\"" + getIdentifier(path, "autotools.default")
-				+ "\"");
-		buffer.append(" name=\"Configuration\"");
-		buffer.append(" parent=\"org.eclipse.linuxtools.cdt.autotools.core.configuration.build\">");
-		buffer.append(createAutotoolsToolchainRef(path));
-		buffer.append(" </configuration>");
-		return buffer;
+	private IManagedConfigElement createAutotoolsConfiguration(String path) {
+		BuildrootConfigElement config = new BuildrootConfigElement(
+				ManagedConfigElement.CONFIGURATION);
+		config.setAttribute(ManagedConfigElementAttribute.buildProperties,
+				"org.eclipse.linuxtools.cdt.autotools.core.buildType.default");
+		config.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, "autotools.default"));
+		config.setAttribute(ManagedConfigElementAttribute.name, "Configuration");
+		config.setAttribute(ManagedConfigElementAttribute.parent,
+				"org.eclipse.linuxtools.cdt.autotools.core.configuration.build");
+		config.addChild(createAutotoolsToolchainRef(path));
+		return config;
 	}
 
-	private StringBuffer createAutotoolsToolchainRef(String path) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<toolChain");
-		buffer.append(" id=\"" + getIdentifier(path, "autotools.default")
-				+ "\"");
-		buffer.append(" superClass=\"" + getAutotoolsToolchainIdentifier(path)
-				+ "\">");
-		buffer.append("</toolChain>");
-		return buffer;
+	private IManagedConfigElement createAutotoolsToolchainRef(String path) {
+		BuildrootConfigElement toolchain = new BuildrootConfigElement(
+				ManagedConfigElement.TOOLCHAIN);
+		toolchain.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, "autotools.default"));
+		toolchain.setAttribute(ManagedConfigElementAttribute.superClass,
+				getAutotoolsToolchainIdentifier(path));
+		return toolchain;
 	}
 
-	private StringBuffer createProjectType(String path, String prefix,
+	private IManagedConfigElement createProjectType(String path, String prefix,
 			String architecture, BuildArtefactType artefactType) {
+		BuildrootConfigElement projectType = new BuildrootConfigElement(
+				ManagedConfigElement.PROJECT_TYPE);
+		projectType.setAttribute(
+				ManagedConfigElementAttribute.buildArtefactType,
+				"org.eclipse.cdt.build.core.buildArtefactType."
+						+ artefactType.getValue());
+		projectType.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, artefactType.getValue()));
+		projectType.setAttribute(ManagedConfigElementAttribute.isAbstract,
+				FALSE);
+		projectType.setAttribute(ManagedConfigElementAttribute.isTest, FALSE);
+		projectType
+				.setAttribute(
+						ManagedConfigElementAttribute.projectEnvironmentSupplier,
+						"org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootEnvironmentVariableSupplier");
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("<projectType");
-		buffer.append(" buildArtefactType=\""
-				+ "org.eclipse.cdt.build.core.buildArtefactType."
-				+ artefactType.getValue() + "\"");
-		buffer.append(" id=\"" + getIdentifier(path, artefactType.getValue())
-				+ "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" isTest=\"false\"");
-		buffer.append(" projectEnvironmentSupplier=\"org.buildroot.cdt.toolchain.managedbuilder.toolchain.BuildrootEnvironmentVariableSupplier\">");
 
 		// Create debug configuration
-		buffer.append(createConfiguration(path, ConfigurationType.DEBUG,
+		projectType.addChild(createConfiguration(path, ConfigurationType.DEBUG,
 				artefactType));
 
 		// Create release configuration
-		buffer.append(createConfiguration(path, ConfigurationType.RELEASE,
-				artefactType));
-		buffer.append("</projectType>");
-		return buffer;
+		projectType.addChild(createConfiguration(path,
+				ConfigurationType.RELEASE, artefactType));
+
+		return projectType;
 	}
 
-	private StringBuffer createConfiguration(String path,
+	private IManagedConfigElement createConfiguration(String path,
 			ConfigurationType configType, BuildArtefactType artefactType) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<configuration");
-		buffer.append(" buildProperties=\""
-				+ "org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType."
-				+ configType.name().toLowerCase() + "\"");
-		buffer.append(" cleanCommand=\"rm -rf\"");
-		buffer.append(" id=\""
-				+ getIdentifier(path, artefactType.getValue() + "."
-						+ configType.toString().toLowerCase()) + "\"");
-		buffer.append(" name=\"" + configType.toString().toLowerCase() + "\"");
-		buffer.append(" parent=\"cdt.managedbuild.config.gnu.base\">");
-		buffer.append(createToolchainRef(path, artefactType, configType));
-		buffer.append("</configuration>");
-		return buffer;
+		BuildrootConfigElement config = new BuildrootConfigElement(
+				ManagedConfigElement.CONFIGURATION);
+		config.setAttribute(ManagedConfigElementAttribute.buildProperties,
+				"org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType."
+						+ configType.name().toLowerCase());
+		config.setAttribute(ManagedConfigElementAttribute.cleanCommand,
+				"rm -rf");
+		config.setAttribute(
+				ManagedConfigElementAttribute.id,
+				getIdentifier(path, artefactType.getValue() + "."
+						+ configType.toString().toLowerCase()));
+		config.setAttribute(ManagedConfigElementAttribute.name, configType
+				.toString().toLowerCase());
+		config.setAttribute(ManagedConfigElementAttribute.parent,
+				"cdt.managedbuild.config.gnu.base");
+
+		config.addChild(createToolchainRef(path, artefactType, configType));
+
+		return config;
 	}
 
-	private StringBuffer createToolchainRef(String path,
+	private IManagedConfigElement createToolchainRef(String path,
 			BuildArtefactType artefactType, ConfigurationType configType) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<toolChain");
-		buffer.append(" id=\""
-				+ getIdentifier(path, artefactType.getValue() + "."
-						+ configType.name().toLowerCase()) + "\"");
-		buffer.append(" superClass=\"" + getToolchainIdentifier(path) + "\">");
-		buffer.append("</toolChain>");
-		return buffer;
+		BuildrootConfigElement toolchain = new BuildrootConfigElement(
+				ManagedConfigElement.TOOLCHAIN);
+		toolchain.setAttribute(
+				ManagedConfigElementAttribute.id,
+				getIdentifier(path, artefactType.getValue() + "."
+						+ configType.name().toLowerCase()));
+		toolchain.setAttribute(ManagedConfigElementAttribute.superClass,
+				getToolchainIdentifier(path));
+		return toolchain;
 	}
 
-	private StringBuffer createToolchain(String path, String prefix,
+	private IManagedConfigElement createToolchain(String path, String prefix,
 			String architecture) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<toolChain");
-		buffer.append(" archList=\"all\"");
-		buffer.append(" configurationEnvironmentSupplier=\"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier\"");
-		buffer.append(" id=\"" + getToolchainIdentifier(path) + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\""
-				+ BuildrootUtils.getToolName(architecture, path, null) + "\"");
-		buffer.append(" osList=\"linux\">");
+
+		BuildrootConfigElement toolchain = new BuildrootConfigElement(
+				ManagedConfigElement.TOOLCHAIN);
+		toolchain.setAttribute(ManagedConfigElementAttribute.archList, ALL);
+		toolchain
+				.setAttribute(
+						ManagedConfigElementAttribute.configurationEnvironmentSupplier,
+						"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier");
+		toolchain.setAttribute(ManagedConfigElementAttribute.id,
+				getToolchainIdentifier(path));
+		toolchain
+				.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		toolchain.setAttribute(ManagedConfigElementAttribute.name,
+				BuildrootUtils.getToolName(architecture, path, null));
+		toolchain.setAttribute(ManagedConfigElementAttribute.osList,
+				BuildrootConfigElement.LINUX);
 
 		// Create options and option category
-		buffer.append(createOptions(path, prefix, getToolchainIdentifier(path)));
+		toolchain.addChildren(createOptions(path, prefix,
+				getToolchainIdentifier(path)));
 
 		// Create target platform
-		buffer.append(createTargetPlatform(path, architecture));
+		toolchain.addChild(createTargetPlatform(path, architecture));
 
 		// Create assembler
-		buffer.append(createTool(path, prefix, architecture,
+		toolchain.addChild(createTool(path, prefix, architecture,
 				BuildrootToolType.ASSEMBLER));
 
 		// Create C compiler. We ignore all the toolchain that does not define a
 		// C compiler.
-		buffer.append(createTool(path, prefix, architecture,
+		toolchain.addChild(createTool(path, prefix, architecture,
 				BuildrootToolType.C_COMPILER));
 
 		// Create C Linker
-		buffer.append(createTool(path, prefix, architecture,
+		toolchain.addChild(createTool(path, prefix, architecture,
 				BuildrootToolType.C_LINKER));
 
 		// Create C++ compiler if necessary
 		if (BuildrootUtils.isCompilerAvailable(path, prefix, "g++")) {
-			buffer.append(createTool(path, prefix, architecture,
+			toolchain.addChild(createTool(path, prefix, architecture,
 					BuildrootToolType.CC_COMPILER));
-			buffer.append(createTool(path, prefix, architecture,
+			toolchain.addChild(createTool(path, prefix, architecture,
 					BuildrootToolType.CC_LINKER));
 		}
 
 		// Create pkg-config
-		buffer.append(createTool(path, prefix, architecture,
+		toolchain.addChild(createTool(path, prefix, architecture,
 				BuildrootToolType.PKG_CONFIG));
 
 		// Create builder
-		buffer.append(createBuilder(path, architecture));
-		buffer.append("</toolChain>");
-		return buffer;
+		toolchain.addChild(createBuilder(path, architecture));
+		return toolchain;
 	}
 
-	private StringBuffer createOptions(String path, String prefix,
-			String toolchainId) {
-		StringBuffer buffer = new StringBuffer();
+	private List<IManagedConfigElement> createOptions(String path,
+			String prefix, String toolchainId) {
+		List<IManagedConfigElement> options = new ArrayList<IManagedConfigElement>();
+		BuildrootConfigElement optionCategory = new BuildrootConfigElement(
+				ManagedConfigElement.OPTION_CATEGORY);
 		String optionCategoryId = toolchainId + ".optionCategory";
-		buffer.append("<optionCategory");
-		buffer.append(" id=\"" + optionCategoryId + "\"");
-		buffer.append(" name=\"Generic Buildroot Settings\">");
-		buffer.append("</optionCategory>");
-		buffer.append(createPathOption(path, toolchainId, optionCategoryId));
-		buffer.append(createPrefixOption(prefix, toolchainId, optionCategoryId));
-		return buffer;
+		optionCategory.setAttribute(ManagedConfigElementAttribute.id,
+				optionCategoryId);
+		optionCategory.setAttribute(ManagedConfigElementAttribute.name,
+				"Generic Buildroot Settings");
+		options.add(optionCategory);
+
+		options.add(createPathOption(path, toolchainId, optionCategoryId));
+
+		options.add((createPrefixOption(prefix, toolchainId, optionCategoryId)));
+		return options;
 	}
 
-	private StringBuffer createPathOption(String path, String toolchainId,
-			String optionCategoryId) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<option");
-		buffer.append(" category=\"" + optionCategoryId + "\"");
-		buffer.append(" id=\"" + toolchainId + ".option.path" + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\"Path\"");
-		buffer.append(" resourceFilter=\"all\"");
-		buffer.append(" value=\"" + path + "/host/usr/bin\"");
-		buffer.append(" valueType=\"string\">");
-		buffer.append("</option>");
-		return buffer;
+	private IManagedConfigElement createPathOption(String path,
+			String toolchainId, String optionCategoryId) {
+		BuildrootConfigElement option = new BuildrootConfigElement(
+				ManagedConfigElement.OPTION);
+		option.setAttribute(ManagedConfigElementAttribute.category,
+				optionCategoryId);
+		option.setAttribute(ManagedConfigElementAttribute.id, toolchainId
+				+ ".option.path");
+		option.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		option.setAttribute(ManagedConfigElementAttribute.name, "Path");
+		option.setAttribute(ManagedConfigElementAttribute.resourceFilter, ALL);
+		option.setAttribute(ManagedConfigElementAttribute.value, path
+				+ "/host/usr/bin");
+		option.setAttribute(ManagedConfigElementAttribute.valueType, STRING);
+		return option;
 	}
 
-	private StringBuffer createPrefixOption(String prefix, String toolchainId,
-			String optionCategoryId) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<option");
-		buffer.append(" category=\"" + optionCategoryId + "\"");
-		buffer.append(" id=\"" + toolchainId + ".option.prefix" + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\"Path\"");
-		buffer.append(" resourceFilter=\"all\"");
-		buffer.append(" value=\"" + prefix + "\"");
-		buffer.append(" valueType=\"string\">");
-		buffer.append("</option>");
-		return buffer;
+	private IManagedConfigElement createPrefixOption(String prefix,
+			String toolchainId, String optionCategoryId) {
+		BuildrootConfigElement option = new BuildrootConfigElement(
+				ManagedConfigElement.OPTION);
+		option.setAttribute(ManagedConfigElementAttribute.category,
+				optionCategoryId);
+		option.setAttribute(ManagedConfigElementAttribute.id, toolchainId
+				+ ".option.prefix");
+		option.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		option.setAttribute(ManagedConfigElementAttribute.name, "Prefix");
+		option.setAttribute(ManagedConfigElementAttribute.resourceFilter, ALL);
+		option.setAttribute(ManagedConfigElementAttribute.value, prefix);
+		option.setAttribute(ManagedConfigElementAttribute.valueType, STRING);
+		return option;
 	}
 
 	private String getToolchainIdentifier(String path) {
@@ -420,22 +483,25 @@ public class BuildrootToolchainsProvider implements IStartup {
 		return getIdentifier(path, ".autotools.toolchain.base");
 	}
 
-	private StringBuffer createBuilder(String path, String architecture) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<builder");
-		buffer.append(" command=\"make\"");
-		buffer.append(" id=\"" + getIdentifier(path, "builder") + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\""
-				+ BuildrootUtils.getToolName(architecture, path, "builder")
-				+ "\"");
-		buffer.append(" isVariableCaseSensitive=\"false\"");
-		buffer.append(" superClass=\"cdt.managedbuild.target.gnu.builder\">");
-		buffer.append("</builder>");
-		return buffer;
+	private IManagedConfigElement createBuilder(String path, String architecture) {
+
+		BuildrootConfigElement builder = new BuildrootConfigElement(
+				ManagedConfigElement.BUILDER);
+
+		builder.setAttribute(ManagedConfigElementAttribute.command, "make");
+		builder.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, "builder"));
+		builder.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		builder.setAttribute(ManagedConfigElementAttribute.name,
+				BuildrootUtils.getToolName(architecture, path, "builder"));
+		builder.setAttribute(
+				ManagedConfigElementAttribute.isVariableCaseSensitive, FALSE);
+		builder.setAttribute(ManagedConfigElementAttribute.superClass,
+				"cdt.managedbuild.target.gnu.builder");
+		return builder;
 	}
 
-	private StringBuffer createTool(String path, String prefix,
+	private IManagedConfigElement createTool(String path, String prefix,
 			String architecture, BuildrootToolType toolType) {
 		String toolName = null;
 		String idSuffix = null;
@@ -508,28 +574,32 @@ public class BuildrootToolchainsProvider implements IStartup {
 			break;
 		}
 
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<tool");
-		buffer.append(" command=\"" + toolPath + "\"");
-		buffer.append(" commandLineGenerator=\"org.eclipse.cdt.managedbuilder.internal.core.ManagedCommandLineGenerator\"");
-		buffer.append(" id=\"" + getIdentifier(path, idSuffix) + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\""
-				+ BuildrootUtils.getToolName(architecture, path,
-						toolDescription) + "\"");
-		buffer.append(" natureFilter=\"" + natureFilter + "\"");
-		buffer.append(" superClass=\"" + superClass + "\">");
+		BuildrootConfigElement tool = new BuildrootConfigElement(
+				ManagedConfigElement.TOOL);
+		tool.setAttribute(ManagedConfigElementAttribute.command, toolPath);
+		tool.setAttribute(
+				ManagedConfigElementAttribute.commandLineGenerator,
+				BuildrootConfigElement.CDT_MANAGEDBUILDER_COMMAND_LINE_GENERATOR);
+		tool.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, idSuffix));
+		tool.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		tool.setAttribute(ManagedConfigElementAttribute.name,
+				BuildrootUtils.getToolName(architecture, path, toolDescription));
+		tool.setAttribute(ManagedConfigElementAttribute.natureFilter,
+				natureFilter);
+		tool.setAttribute(ManagedConfigElementAttribute.superClass, superClass);
+
 		if (toolType == BuildrootToolType.C_COMPILER
 				|| toolType == BuildrootToolType.CC_COMPILER) {
-			buffer.append(createInputType(path, architecture, toolType,
-					toolPath));
+			tool.addChild((createInputType(path, architecture, toolType,
+					toolPath)));
 		}
-		buffer.append("</tool>");
-		return buffer;
+
+		return tool;
 	}
 
-	private StringBuffer createInputType(String path, String architecture,
-			BuildrootToolType toolType, String toolPath) {
+	private IManagedConfigElement createInputType(String path,
+			String architecture, BuildrootToolType toolType, String toolPath) {
 		String scannerConfigProfileId = null;
 		String superClass = null;
 		String id = null;
@@ -539,34 +609,35 @@ public class BuildrootToolchainsProvider implements IStartup {
 			id = getIdentifier(path, "c.input");
 			scannerConfigProfileId = getScannerConfigProfileId(path,
 					architecture, toolType);
-			superClass = "cdt.managedbuild.tool.gnu.c.compiler.input";
+			superClass = BuildrootConfigElement.CDT_MANAGEDBUILD_C_COMPILER_INPUT;
 			break;
 
 		case CC_COMPILER:
 			id = getIdentifier(path, "cpp.input");
 			scannerConfigProfileId = getScannerConfigProfileId(path,
 					architecture, toolType);
-			superClass = "cdt.managedbuild.tool.gnu.cpp.compiler.input";
+			superClass = BuildrootConfigElement.CDT_MANAGEDBUILD_CPP_COMPILER_INPUT;
 			break;
 		default:
 			break;
 		}
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<inputType");
-		buffer.append(" superClass=\"" + superClass + "\"");
-		buffer.append(" id=\"" + id + "\"");
-		buffer.append(" scannerConfigDiscoveryProfileId=\""
-				+ scannerConfigProfileId + "\">");
-		buffer.append("</inputType>");
+
+		BuildrootConfigElement inputType = new BuildrootConfigElement(
+				ManagedConfigElement.INPUT_TYPE);
+		inputType.setAttribute(ManagedConfigElementAttribute.superClass,
+				superClass);
+		inputType.setAttribute(ManagedConfigElementAttribute.id, id);
+		inputType.setAttribute(ManagedConfigElementAttribute.scannerConfigDiscoveryProfileId,
+				scannerConfigProfileId);
 
 		// Get the scanner configuration discovery profile
-		StringBuffer buffer2 = createScannerConfigurationDiscoveryProfile(path,
+		StringBuffer buffer = createScannerConfigurationDiscoveryProfile(path,
 				architecture, toolType, toolPath);
 
 		// Register this extension dynamically
-		BuildrootUtils.registerExtensionPoint(buffer2);
+		BuildrootUtils.registerExtensionPoint(buffer);
 
-		return buffer;
+		return inputType;
 	}
 
 	/**
@@ -655,19 +726,24 @@ public class BuildrootToolchainsProvider implements IStartup {
 		return null;
 	}
 
-	private StringBuffer createTargetPlatform(String path, String architecture) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("<targetPlatform");
-		buffer.append(" archList=\"all\"");
-		buffer.append(" binaryParser=\"org.eclipse.cdt.core.GNU_ELF\"");
-		buffer.append(" id=\"" + getIdentifier(path, "platform.base") + "\"");
-		buffer.append(" isAbstract=\"false\"");
-		buffer.append(" name=\""
-				+ BuildrootUtils.getToolName(architecture, path, "Platform")
-				+ "\"");
-		buffer.append(" osList=\"linux\">");
-		buffer.append("</targetPlatform>");
-		return buffer;
+	private IManagedConfigElement createTargetPlatform(String path,
+			String architecture) {
+		BuildrootConfigElement targetPlatform = new BuildrootConfigElement(
+				ManagedConfigElement.TARGET_PLATFORM);
+		targetPlatform.setAttribute(ManagedConfigElementAttribute.archList,
+				ALL);
+		targetPlatform.setAttribute(
+				ManagedConfigElementAttribute.binaryParser,
+				"org.eclipse.cdt.core.GNU_ELF");
+		targetPlatform.setAttribute(ManagedConfigElementAttribute.id,
+				getIdentifier(path, "platform.base"));
+		targetPlatform.setAttribute(ManagedConfigElementAttribute.isAbstract,
+				FALSE);
+		targetPlatform.setAttribute(ManagedConfigElementAttribute.name,
+				BuildrootUtils.getToolName(architecture, path, "Platform"));
+		targetPlatform.setAttribute(ManagedConfigElementAttribute.osList,
+				BuildrootConfigElement.LINUX);
+		return targetPlatform;
 	}
 
 	private String getIdentifier(String path, String suffix) {

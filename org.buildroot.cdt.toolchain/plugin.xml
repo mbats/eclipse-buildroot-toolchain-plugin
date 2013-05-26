@@ -2,10 +2,14 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension
-         point="org.eclipse.ui.startup">
-      <startup
-            class="org.buildroot.cdt.toolchain.BuildrootToolchainsProvider">
-      </startup>
+         point="org.eclipse.cdt.managedbuilder.core.buildDefinitions">
+      <dynamicElementProvider
+            class="org.buildroot.cdt.toolchain.BuildrootToolchainsProvider"
+            name="BuildrootToolchainsProvider">
+      </dynamicElementProvider>
+      <managedBuildRevision
+            fileVersion="1.0.0">
+      </managedBuildRevision>
    </extension>
 
 </plugin>
