@@ -230,6 +230,10 @@ litigation.
          id="org.eclipse.cdt.autotools.feature.patch"
          version="0.0.0"/>
 
+   <includes
+         id="org.eclipse.cdt.managedbuilder.core.feature.patch"
+         version="0.0.0"/>
+
    <plugin
          id="org.buildroot.cdt.toolchain"
          download-size="0"

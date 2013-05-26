@@ -37,6 +37,9 @@
 		<module>../org.buildroot.cdt.toolchain.feature</module>
 		<module>../org.buildroot.cdt.toolchain.update</module>
 		
+		<module>../org.eclipse.cdt.managedbuilder.core.feature.patch</module>
+		<module>../org.eclipse.cdt.managedbuilder.core</module>
+		
 		<module>../org.eclipse.cdt.autotools.feature.patch</module>
 		<module>../org.eclipse.cdt.autotools.core</module>
 		<module>../org.eclipse.cdt.autotools.ui</module>
