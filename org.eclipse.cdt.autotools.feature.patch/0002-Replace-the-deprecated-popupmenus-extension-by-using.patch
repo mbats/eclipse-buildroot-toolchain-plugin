@@ -1,7 +1,7 @@
 From f22a076dd61c112a74b8e075336e788abb81c177 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A9lanie=20Bats?= <melanie.bats@obeo.fr>
 Date: Thu, 7 Mar 2013 22:40:55 +0100
-Subject: [PATCH] Replace the deprecated popupmenus extension by using the
+Subject: [PATCH 2/4] Replace the deprecated popupmenus extension by using the
  menus extension
 
 ---

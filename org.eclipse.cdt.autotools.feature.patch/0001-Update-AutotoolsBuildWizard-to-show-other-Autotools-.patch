@@ -1,5 +1,15 @@
+From 495f28e8360ea8d014bdf3ffd1e6787c613944b5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A9lanie=20Bats?= <melanie.bats@obeo.fr>
+Date: Wed, 6 Mar 2013 22:00:05 +0100
+Subject: [PATCH 1/4] Update AutotoolsBuildWizard to show other Autotools
+ toolchains
+
+---
+ .../autotools/ui/wizards/AutotoolsBuildWizard.java |   74 +++++++++++++++++---
+ 1 file changed, 63 insertions(+), 11 deletions(-)
+
 diff --git a/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/wizards/AutotoolsBuildWizard.java b/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/wizards/AutotoolsBuildWizard.java
-index 60de20c..f123299 100644
+index 60de20c..c4b02a5 100644
 --- a/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/wizards/AutotoolsBuildWizard.java
 +++ b/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/wizards/AutotoolsBuildWizard.java
 @@ -13,6 +13,7 @@ package org.eclipse.cdt.internal.autotools.ui.wizards;
@@ -23,72 +33,38 @@ index 60de20c..f123299 100644
  import org.eclipse.cdt.managedbuilder.ui.wizards.AbstractCWizard;
  import org.eclipse.cdt.managedbuilder.ui.wizards.MBSWizardHandler;
  import org.eclipse.cdt.ui.newui.CDTPrefUtil;
-@@ -33,35 +37,45 @@ import org.eclipse.jface.wizard.IWizard;
+@@ -32,6 +36,7 @@ import org.eclipse.jface.wizard.IWizard;
+ /**
   *
   */
++@SuppressWarnings("restriction")
  public class AutotoolsBuildWizard extends AbstractCWizard {
--	public static final String OTHERS_LABEL = AutotoolsWizardMessages.getResourceString("AutotoolsBuildWizard.1"); //$NON-NLS-1$
-+	public static final String OTHERS_LABEL = AutotoolsWizardMessages
-+			.getResourceString("AutotoolsBuildWizard.1"); //$NON-NLS-1$
+ 	public static final String OTHERS_LABEL = AutotoolsWizardMessages.getResourceString("AutotoolsBuildWizard.1"); //$NON-NLS-1$
  	public static final String AUTOTOOLS_PROJECTTYPE_ID = "org.eclipse.linuxtools.cdt.autotools.core.projectType"; //$NON-NLS-1$
--	
-+
- 	/**
- 	 * @since 5.1
- 	 */
--	public static final String EMPTY_PROJECT = AutotoolsWizardMessages.getResourceString("AutotoolsBuildWizard.2"); //$NON-NLS-1$
-+	public static final String EMPTY_PROJECT = AutotoolsWizardMessages
-+			.getResourceString("AutotoolsBuildWizard.2"); //$NON-NLS-1$
+@@ -43,8 +48,22 @@ public class AutotoolsBuildWizard extends AbstractCWizard {
  	public static final String AUTOTOOLS_TOOLCHAIN_ID = "org.eclipse.linuxtools.cdt.autotools.core.toolChain"; //$NON-NLS-1$
--	
-+
-+	public Map<IProjectType, AutotoolsBuildWizardHandler> autotoolsProjectTypes = new HashMap<IProjectType, AutotoolsBuildWizardHandler>();
-+	private AutotoolsBuildWizardHandler autotoolsBuildWizardHandler;
-+	private IProjectType autotoolsProjectType;
-+
+ 	
  	/**
--	 * Creates and returns an array of items to be displayed 
-+	 * Creates and returns an array of items to be displayed
++	 * Get all the project types that extends the autotools project type.
++	 */
++	private Map<IProjectType, AutotoolsBuildWizardHandler> autotoolsProjectTypes = new HashMap<IProjectType, AutotoolsBuildWizardHandler>();
++	/**
++	 * The autotools build wizard handler.
++	 */
++	private AutotoolsBuildWizardHandler autotoolsBuildWizardHandler;
++	/**
++	 * The autotools project type.
++	 */
++	private IProjectType autotoolsProjectType;
++	 
++	/**
+ 	 * Creates and returns an array of items to be displayed 
  	 */
++	@SuppressWarnings("restriction")
  	public EntryDescriptor[] createItems(boolean supportedOnly, IWizard wizard) {
--		IBuildPropertyManager bpm = ManagedBuildManager.getBuildPropertyManager();
-+		IBuildPropertyManager bpm = ManagedBuildManager
-+				.getBuildPropertyManager();
+ 		IBuildPropertyManager bpm = ManagedBuildManager.getBuildPropertyManager();
  		IBuildPropertyType bpt = bpm.getPropertyType(MBSWizardHandler.ARTIFACT);
- 		IBuildPropertyValue[] vs = bpt.getSupportedValues();
- 		Arrays.sort(vs, BuildListComparator.getInstance());
- 		ArrayList<EntryDescriptor> items = new ArrayList<EntryDescriptor>();
- 
--		// look for project types that have a toolchain based on the Autotools toolchain
-+		// look for project types that have a toolchain based on the Autotools
-+		// toolchain
- 		// and if so, add an entry for the project type.
- 		// Fix for bug#374026
- 		EntryDescriptor oldsRoot = null;
--		SortedMap<String, IProjectType> sm = ManagedBuildManager.getExtensionProjectTypeMap();
-+		SortedMap<String, IProjectType> sm = ManagedBuildManager
-+				.getExtensionProjectTypeMap();
- 		for (Map.Entry<String, IProjectType> e : sm.entrySet()) {
- 			IProjectType pt = e.getValue();
--			AutotoolsBuildWizardHandler h = new AutotoolsBuildWizardHandler(pt, parent, wizard);
-+			AutotoolsBuildWizardHandler h = new AutotoolsBuildWizardHandler(pt,
-+					parent, wizard);
- 			IToolChain[] tcs = ManagedBuildManager.getExtensionToolChains(pt);
--			for(int i = 0; i < tcs.length; i++){
-+			for (int i = 0; i < tcs.length; i++) {
- 				IToolChain t = tcs[i];
- 
- 				IToolChain parent = t;
-@@ -72,7 +86,7 @@ public class AutotoolsBuildWizard extends AbstractCWizard {
- 				if (!parent.getId().equals(AUTOTOOLS_TOOLCHAIN_ID))
- 					continue;
- 
--				if(t.isSystemObject()) 
-+				if (t.isSystemObject())
- 					continue;
- 				if (!isValid(t, supportedOnly, wizard))
- 					continue;
-@@ -80,21 +94,50 @@ public class AutotoolsBuildWizard extends AbstractCWizard {
+@@ -80,20 +99,53 @@ public class AutotoolsBuildWizard extends AbstractCWizard {
  				h.addTc(t);
  			}
  
@@ -97,19 +73,18 @@ index 60de20c..f123299 100644
 -				if (oldsRoot == null) {
 -					oldsRoot = new EntryDescriptor(OTHERS_LABEL, null, OTHERS_LABEL, true, null, null);
 -					items.add(oldsRoot);
-+			if (h.getToolChainsCount() > 0) {
-+				if (AUTOTOOLS_PROJECTTYPE_ID.equals(pt.getId())) {
-+					autotoolsBuildWizardHandler = h;
-+					autotoolsProjectType = pt;
-+				} else {
-+					autotoolsProjectTypes.put(pt, h);
- 				}
--				pId = oldsRoot.getId();
--			} else { // do not group to <Others>
--			pId = null;
- 			}
++			// Get the autotools project type and build wizard handler
++			if (AUTOTOOLS_PROJECTTYPE_ID.equals(pt.getId())) {
++				autotoolsBuildWizardHandler = h;
++				autotoolsProjectType = pt;
++			} else {
++				// Keep the other autotools toolchains in order to register them
++				// into the default autotools project type later
++				autotoolsProjectTypes.put(pt, h);
++			}
 +		}
-+
++		
++		// Register all the autotools toolchains in the default autotools project type
 +		for (IProjectType projectType : autotoolsProjectTypes.keySet()) {
 +			AutotoolsBuildWizardHandler h = autotoolsProjectTypes
 +					.get(projectType);
@@ -118,17 +93,23 @@ index 60de20c..f123299 100644
 +				for (IConfiguration config : projectType.getConfigurations()) {
 +					if (tc.equals(config.getToolChain()))
 +						tcConfig = config;
-+				}
+ 				}
+-				pId = oldsRoot.getId();
+-			} else { // do not group to <Others>
+-			pId = null;
++				// Add the new configurations
 +				if (autotoolsProjectType instanceof ProjectType
 +						&& tcConfig instanceof Configuration)
 +					((ProjectType) autotoolsProjectType)
 +							.addConfiguration((Configuration) tcConfig);
++				// Add the new toolchain
 +				autotoolsBuildWizardHandler.addTc(tc);
-+			}
-+		}
- 
+ 			}
+-
 -			if (h.getToolChainsCount() > 0)
 -				items.add(new EntryDescriptor(pt.getId(), pId, pt.getName(), true, h, null));
+ 		}
++		
 +		String pId = null;
 +		if (CDTPrefUtil.getBool(CDTPrefUtil.KEY_OTHERS)) {
 +			if (oldsRoot == null) {
@@ -139,14 +120,15 @@ index 60de20c..f123299 100644
 +			pId = oldsRoot.getId();
 +		} else { // do not group to <Others>
 +			pId = null;
- 		}
- 
--		return (EntryDescriptor[])items.toArray(new EntryDescriptor[items.size()]);
++		}
++
++		// Add the autotools project type
 +		items.add(new EntryDescriptor(autotoolsProjectType.getId(), pId,
 +				autotoolsProjectType.getName(), true,
 +				autotoolsBuildWizardHandler, null));
-+
-+		return (EntryDescriptor[]) items.toArray(new EntryDescriptor[items
-+				.size()]);
+ 
+ 		return (EntryDescriptor[])items.toArray(new EntryDescriptor[items.size()]);
  	}
- }
+-- 
+1.7.9.5
+

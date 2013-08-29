@@ -1,0 +1,212 @@
+From 26953c5538e19c86298d4a84552279508d3e60a4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A9lanie=20Bats?= <melanie.bats@obeo.fr>
+Date: Sun, 10 Mar 2013 15:24:36 +0100
+Subject: [PATCH 3/4] Set default value to the --host option through the
+ plugin.xml
+
+---
+ .../core/configure/AutotoolsConfiguration.java     |   73 +++++++++++++++-----
+ .../configure/AutotoolsConfigurationManager.java   |    8 +--
+ .../autotools/core/configure/IAConfiguration.java  |    8 ++-
+ .../properties/AutotoolsConfigurePropertyTab.java  |    2 +-
+ 4 files changed, 66 insertions(+), 25 deletions(-)
+
+diff --git a/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfiguration.java b/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfiguration.java
+index 40dfb2f..740366d 100644
+--- a/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfiguration.java
++++ b/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfiguration.java
+@@ -17,7 +17,11 @@ import java.util.Iterator;
+ import java.util.Map;
+ 
+ import org.eclipse.cdt.autotools.core.AutotoolsOptionConstants;
+-
++import org.eclipse.cdt.managedbuilder.core.IOption;
++import org.eclipse.cdt.managedbuilder.core.ITool;
++import org.eclipse.cdt.managedbuilder.core.IToolChain;
++import org.eclipse.cdt.managedbuilder.core.ManagedBuildManager;
++import org.eclipse.core.resources.IProject;
+ 
+ public class AutotoolsConfiguration implements IAConfiguration {
+ 
+@@ -121,20 +125,21 @@ public class AutotoolsConfiguration implements IAConfiguration {
+ 	private Map<String, IConfigureOption> configOptions;
+ 	private ArrayList<String> configParms = new ArrayList<String>();
+ 
+-	public AutotoolsConfiguration(String name) {
+-		this(name, true);
++	public AutotoolsConfiguration(IProject project, String name) {
++		this(project, name, true);
+ 	}
+-		
+-	private AutotoolsConfiguration(String name, boolean initialize) {
++
++	private AutotoolsConfiguration(IProject project, String name,
++			boolean initialize) {
+ 		this.id = name;
+ 		configOptions = new HashMap<String, IConfigureOption>();
+ 		if (initialize)
+-			initConfigOptions();
++			initConfigOptions(project);
+ 		isParmsDirty = true;
+ 	}
+-	
+-	private void initConfigOptions() {
+-		// Put configure options in hash map.  Ignore categories.
++
++	private void initConfigOptions(IProject project) {
++		// Put configure options in hash map. Ignore categories.
+ 		ArrayList<Option> tools = new ArrayList<Option>();
+ 		FlagConfigureOption lastFlag = null;
+ 		for (int i = 0; i < configOpts.length; ++i) {
+@@ -195,8 +200,41 @@ public class AutotoolsConfiguration implements IAConfiguration {
+ 			}
+ 		}
+ 		toolList = tools.toArray(new Option[tools.size()]);
++
++		// To set the --host default value from the plugin.xml, the overriding
++		// toolchain should define a tool that defines has superClass
++		// org.eclipse.linuxtools.cdt.autotools.core.tool.configure. Then the
++		// overriding tool should define an option which defines as superClass
++		// org.eclipse.linuxtools.cdt.autotools.core.tool.configure
++
++		// Get current toolchain
++		IToolChain toolChain = ManagedBuildManager.getBuildInfo(project)
++				.getDefaultConfiguration().getToolChain();
++		ITool[] toolChainTools = toolChain.getTools();
++
++		// Get configure tool
++		for (ITool tool : toolChainTools) {
++			if (tool.getBaseId() != "org.eclipse.linuxtools.cdt.autotools.core.tool.configure"
++					&& tool.getSuperClass() != null
++					&& "org.eclipse.linuxtools.cdt.autotools.core.tool.configure"
++							.equals(tool.getSuperClass().getSuperClass()
++									.getId())) {
++				// Get --host option
++				for (IOption option : tool.getOptions()) {
++					if (option.getSuperClass() != null
++							&& option
++									.getSuperClass()
++									.getBaseId()
++									.equals("org.eclipse.linuxtools.cdt.autotools.core.option.configure.host")) {
++						configOptions.get(AutotoolsOptionConstants.OPT_HOST)
++								.setValue((String) option.getDefaultValue());
++					}
++				}
++			}
++		}
++
+ 	}
+-	
++
+ 	public static Option[] getOptionList() {
+ 		return configOpts.clone();
+ 	}
+@@ -239,12 +277,13 @@ public class AutotoolsConfiguration implements IAConfiguration {
+ 		return configOptions.get(name);
+ 	}
+ 
+-	public IAConfiguration copy() {
+-		return copy(id);
++	public IAConfiguration copy(IProject project) {
++		return copy(project, id);
+ 	}
+-	
+-	public IAConfiguration copy(String newId) {
+-		AutotoolsConfiguration cfg = new AutotoolsConfiguration(newId, false);
++
++	public IAConfiguration copy(IProject project, String newId) {
++		AutotoolsConfiguration cfg = new AutotoolsConfiguration(project, newId,
++				false);
+ 		Collection<IConfigureOption> oldValues = configOptions.values();
+ 		for (Iterator<IConfigureOption> i = oldValues.iterator(); i.hasNext();) {
+ 			IConfigureOption opt = i.next();
+@@ -338,7 +377,7 @@ public class AutotoolsConfiguration implements IAConfiguration {
+ 		return option.getValue();
+ 	}
+ 
+-	public void setDefaultOptions() {
+-		initConfigOptions();
++	public void setDefaultOptions(IProject project) {
++		initConfigOptions(project);
+ 	}
+ }
+diff --git a/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfigurationManager.java b/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfigurationManager.java
+index 1c1e526..9fcd9b4 100644
+--- a/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfigurationManager.java
++++ b/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/AutotoolsConfigurationManager.java
+@@ -97,7 +97,7 @@ public class AutotoolsConfigurationManager implements IResourceChangeListener {
+ 	}
+ 
+ 	public synchronized IAConfiguration createDefaultConfiguration(IProject project, String id) {
+-		IAConfiguration cfg = new AutotoolsConfiguration(id);
++		IAConfiguration cfg = new AutotoolsConfiguration(project, id);
+ 		return cfg;
+ 	}
+ 	
+@@ -119,7 +119,7 @@ public class AutotoolsConfigurationManager implements IResourceChangeListener {
+ 			}
+ 		} else {
+ 			if (!persist) {
+-				cfg = cfg.copy();
++				cfg = cfg.copy(p);
+ 			}
+ 		}
+ 		return cfg;
+@@ -224,7 +224,7 @@ public class AutotoolsConfigurationManager implements IResourceChangeListener {
+ 							else
+ 								continue; // have to punt, this doesn't map to real cfg
+ 						}
+-						IAConfiguration cfg = new AutotoolsConfiguration(cfgId);
++						IAConfiguration cfg = new AutotoolsConfiguration(project, cfgId);
+ 						NodeList l = n.getChildNodes();
+ 						for (int y = 0; y < l.getLength(); ++y) {
+ 							Node child = l.item(y);
+@@ -311,7 +311,7 @@ public class AutotoolsConfigurationManager implements IResourceChangeListener {
+ 		if (savedList != null)
+ 			oldCfg = savedList.get(oldId);
+ 		if (oldCfg != null) {
+-			IAConfiguration newCfg = oldCfg.copy(cfgd.getId());
++			IAConfiguration newCfg = oldCfg.copy(p, cfgd.getId());
+ 			tmpList.put(cfgd.getId(), newCfg);
+ 			// Check to see if the new configuration is already stored as part of the project description.
+ 			// If yes, it should already be saved.  This can occur if the configuration was added as part of
+diff --git a/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/IAConfiguration.java b/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/IAConfiguration.java
+index f71e1ee..5be4a9b 100644
+--- a/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/IAConfiguration.java
++++ b/build/org.eclipse.cdt.autotools.core/src/org/eclipse/cdt/internal/autotools/core/configure/IAConfiguration.java
+@@ -13,6 +13,8 @@ package org.eclipse.cdt.internal.autotools.core.configure;
+ import java.util.ArrayList;
+ import java.util.Map;
+ 
++import org.eclipse.core.resources.IProject;
++
+ public interface IAConfiguration {
+ 	public IConfigureOption getOption(String name);
+ 	public String getId();
+@@ -24,7 +26,7 @@ public interface IAConfiguration {
+ 	public void setOption(String name, String value);
+ 	public void setConfigToolDirectory(String configToolDirectory);
+ 	public String getConfigToolDirectory();
+-	public IAConfiguration copy();
+-	public IAConfiguration copy(String id);
+-	public void setDefaultOptions();
++	public IAConfiguration copy(IProject project);
++	public IAConfiguration copy(IProject project, String id);
++	public void setDefaultOptions(IProject project);
+ }
+diff --git a/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/properties/AutotoolsConfigurePropertyTab.java b/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/properties/AutotoolsConfigurePropertyTab.java
+index 0e0e1f9..9519197 100644
+--- a/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/properties/AutotoolsConfigurePropertyTab.java
++++ b/build/org.eclipse.cdt.autotools.ui/src/org/eclipse/cdt/internal/autotools/ui/properties/AutotoolsConfigurePropertyTab.java
+@@ -368,7 +368,7 @@ public class AutotoolsConfigurePropertyTab extends AbstractAutotoolsCPropertyTab
+ 	
+ 	protected void performDefaults() {
+ 		IAConfiguration cfg = getAutotoolsCfg();
+-		cfg.setDefaultOptions();
++		cfg.setDefaultOptions(getProject());
+ 		setValues();
+ 	}
+ 	
+-- 
+1.7.9.5
+

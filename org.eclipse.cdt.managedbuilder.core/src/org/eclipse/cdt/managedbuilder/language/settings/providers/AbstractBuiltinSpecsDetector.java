@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2011 Andrew Gvozdev and others.
+ * Copyright (c) 2009, 2013 Andrew Gvozdev and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,8 +17,11 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.cdt.core.CCorePlugin;
@@ -43,10 +46,12 @@ import org.eclipse.cdt.core.settings.model.ICLanguageSettingEntry;
 import org.eclipse.cdt.core.settings.model.ICProjectDescription;
 import org.eclipse.cdt.internal.core.BuildRunnerHelper;
 import org.eclipse.cdt.internal.core.XmlUtil;
+import org.eclipse.cdt.internal.core.envvar.EnvironmentVariableManager;
 import org.eclipse.cdt.managedbuilder.core.ManagedBuilderCorePlugin;
 import org.eclipse.cdt.managedbuilder.internal.core.ManagedMakeMessages;
 import org.eclipse.cdt.utils.CommandLineUtil;
-import org.eclipse.cdt.utils.envvar.EnvironmentCollector;
+import org.eclipse.cdt.utils.envvar.IEnvironmentChangeEvent;
+import org.eclipse.cdt.utils.envvar.IEnvironmentChangeListener;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -81,7 +86,9 @@ import org.w3c.dom.Element;
  *
  * @since 8.1
  */
-public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSettingsOutputScanner implements ICListenerAgent {
+public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSettingsOutputScanner
+		implements ICListenerAgent, IEnvironmentChangeListener {
+
 	public static final String JOB_FAMILY_BUILTIN_SPECS_DETECTOR = "org.eclipse.cdt.managedbuilder.AbstractBuiltinSpecsDetector"; //$NON-NLS-1$
 
 	protected static final String COMPILER_MACRO = "${COMMAND}"; //$NON-NLS-1$
@@ -97,9 +104,11 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 
 	private static final String ATTR_PARAMETER = "parameter"; //$NON-NLS-1$
 	private static final String ATTR_CONSOLE = "console"; //$NON-NLS-1$
+	private static final String ATTR_ENV_HASH = "env-hash"; //$NON-NLS-1$
 
 	private static final String ENV_LANGUAGE = "LANGUAGE"; //$NON-NLS-1$
 	private static final String ENV_LC_ALL = "LC_ALL"; //$NON-NLS-1$
+	private static final String ENV_PATH = "PATH"; //$NON-NLS-1$
 
 	private static final int MONITOR_SCALE = 100;
 	private static final int TICKS_REMOVE_MARKERS = 1 * MONITOR_SCALE;
@@ -112,9 +121,17 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	protected URI buildDirURI = null;
 	protected java.io.File specFile = null;
 	protected boolean preserveSpecFile = false;
+	/** @since 8.2 */
+	protected IEnvironmentVariableManager envMngr = null;
+	/** @since 8.2 */
+	protected volatile Map<String, String> environmentMap = null;
+
 	protected List<ICLanguageSettingEntry> detectedSettingEntries = null;
 	protected int collected = 0;
-	protected boolean isExecuted = false;
+	protected volatile boolean isExecuted = false;
+
+	private static final int HASH_NOT_INITIALIZED = -1;
+	private int envPathHash = HASH_NOT_INITIALIZED;
 
 	private BuildRunnerHelper buildRunnerHelper;
 	private SDMarkerGenerator markerGenerator = new SDMarkerGenerator();
@@ -335,11 +352,21 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	@Override
 	public void registerListener(ICConfigurationDescription cfgDescription) {
 		currentCfgDescription = cfgDescription;
+		EnvironmentVariableManager.fUserSupplier.registerEnvironmentChangeListener(this);
+
 		execute();
 	}
 
 	@Override
 	public void unregisterListener() {
+		EnvironmentVariableManager.fUserSupplier.unregisterEnvironmentChangeListener(this);
+	}
+
+	/** @since 8.2 */
+	@Override
+	public void handleEvent(IEnvironmentChangeEvent event) {
+		// here comes workspace environment change
+		execute();
 	}
 
 	@Override
@@ -348,6 +375,7 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 
 		mappedRootURI = null;
 		buildDirURI = getBuildDirURI(mappedRootURI);
+		environmentMap = createEnvironmentMap(currentCfgDescription);
 	}
 
 	@Override
@@ -359,17 +387,45 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	}
 
 	/**
+	 * This method does 2 related things:
+	 * <br>
+	 * 1. Validate environment, i.e. check that environment for running the command has not changed.
+	 * If environment changed {@link #execute()} will rerun the command even if flag {@link #isExecuted}
+	 * suggests that it was run already.
+	 * <br>
+	 * 2. The relevant environment is cached here so the new one is validated against it at the next call.
+	 * {@link #validateEnvironment()} will be called right before running the job to execute the command.
+	 *
+	 * @since 8.2
+	 */
+	protected boolean validateEnvironment() {
+		String envPathValue = environmentMap.get(ENV_PATH);
+		int envPathValueHash = envPathValue != null ? envPathValue.hashCode() : 0;
+		if (envPathValueHash != envPathHash) {
+			envPathHash = envPathValueHash;
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * Execute provider's command which is expected to print built-in compiler options (specs) to build output.
 	 * The parser will parse output and generate language settings for corresponding resources.
 	 */
 	protected void execute() {
-		if (isExecuted) {
+		environmentMap = createEnvironmentMap(currentCfgDescription);
+		if (validateEnvironment() && isExecuted) {
 			return;
 		}
 
 		WorkspaceJob job = new WorkspaceJob(ManagedMakeMessages.getResourceString("AbstractBuiltinSpecsDetector.DiscoverBuiltInSettingsJobName")) { //$NON-NLS-1$
 			@Override
 			public IStatus runInWorkspace(IProgressMonitor monitor) throws CoreException {
+				isExecuted = false;
+				if (!isEmpty()) {
+					clear();
+					serializeLanguageSettings(currentCfgDescription);
+				}
 				IStatus status;
 				try {
 					startup(currentCfgDescription, null);
@@ -550,7 +606,7 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 				}
 			}
 
-			String[] envp = getEnvp();
+			String[] envp = toEnvp(environmentMap);
 
 			// Using GMAKE_ERROR_PARSER_ID as it can handle generated error messages
 			ErrorParserManager epm = new ErrorParserManager(currentProject, buildDirURI, markerGenerator, new String[] {GMAKE_ERROR_PARSER_ID});
@@ -592,8 +648,10 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	 * @since 8.2
 	 */
 	protected List<IEnvironmentVariable> getEnvironmentVariables() {
-		IEnvironmentVariableManager mngr = CCorePlugin.getDefault().getBuildEnvironmentManager();
-		List<IEnvironmentVariable> vars = new ArrayList<IEnvironmentVariable>(Arrays.asList(mngr.getVariables(currentCfgDescription, true)));
+		if (envMngr == null) {
+			envMngr = CCorePlugin.getDefault().getBuildEnvironmentManager();
+		}
+		List<IEnvironmentVariable> vars = new ArrayList<IEnvironmentVariable>(Arrays.asList(envMngr.getVariables(currentCfgDescription, true)));
 
 		// On POSIX (Linux, UNIX) systems reset language variables to default (English)
 		// with UTF-8 encoding since GNU compilers can handle only UTF-8 characters.
@@ -608,16 +666,27 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	}
 
 	/**
-	 * Get array of environment variables in format "var=value".
+	 * Create a handy map of environment variables.
 	 */
-	private String[] getEnvp() {
-		EnvironmentCollector collector = new EnvironmentCollector();
-		List<IEnvironmentVariable> vars = getEnvironmentVariables();
-		collector.addVariables(vars.toArray(new IEnvironmentVariable[vars.size()]));
+	private Map<String, String> createEnvironmentMap(ICConfigurationDescription cfgDescription) {
+		Map<String, String> envMap = new HashMap<String, String>();
+		for (IEnvironmentVariable var : getEnvironmentVariables()) {
+			String name = var.getName();
+			if (!envMngr.isVariableCaseSensitive()) {
+				name = name.toUpperCase();
+			}
+			envMap.put(name, var.getValue());
+		}
+		return envMap;
+	}
 
+	/**
+	 * Convert map of environment variables to array in format "var=value".
+	 */
+	private String[] toEnvp(Map<String, String> environmentMap) {
 		Set<String> envp = new HashSet<String>();
-		for (IEnvironmentVariable var : collector.getVariables()) {
-			envp.add(var.getName() + '=' + var.getValue());
+		for (Entry<String, String> var: environmentMap.entrySet()) {
+			envp.add(var.getKey() + '=' + var.getValue());
 		}
 		return envp.toArray(new String[envp.size()]);
 	}
@@ -631,7 +700,11 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 		// Built-in specs detectors collect entries not per line but for the whole output
 		// so collect them to save later when output finishes
 		if (entries != null) {
-			detectedSettingEntries.addAll(entries);
+			for (ICLanguageSettingEntry entry : entries) {
+				if (!detectedSettingEntries.contains(entry)) {
+					detectedSettingEntries.add(entry);
+				}
+			}
 		}
 	}
 
@@ -736,6 +809,9 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	public Element serializeAttributes(Element parentElement) {
 		Element elementProvider = super.serializeAttributes(parentElement);
 		elementProvider.setAttribute(ATTR_CONSOLE, Boolean.toString(isConsoleEnabled));
+		if (envPathHash != HASH_NOT_INITIALIZED) {
+			elementProvider.setAttribute(ATTR_ENV_HASH, Integer.toString(envPathHash));
+		}
 		return elementProvider;
 	}
 
@@ -746,6 +822,16 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 		String consoleValue = XmlUtil.determineAttributeValue(providerNode, ATTR_CONSOLE);
 		if (consoleValue != null) {
 			isConsoleEnabled = Boolean.parseBoolean(consoleValue);
+		}
+
+		envPathHash = HASH_NOT_INITIALIZED;
+		String envPathHashStr = XmlUtil.determineAttributeValue(providerNode, ATTR_ENV_HASH);
+		if (envPathHashStr != null) {
+			try {
+				envPathHash = Integer.parseInt(envPathHashStr);
+			} catch (Exception e) {
+				ManagedBuilderCorePlugin.log(new Status(IStatus.ERROR, ManagedBuilderCorePlugin.PLUGIN_ID, "Wrong integer format [" + envPathHashStr + "]", e)); //$NON-NLS-1$ //$NON-NLS-2$
+			}
 		}
 	}
 
@@ -774,6 +860,9 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	protected AbstractBuiltinSpecsDetector cloneShallow() throws CloneNotSupportedException {
 		AbstractBuiltinSpecsDetector clone = (AbstractBuiltinSpecsDetector) super.cloneShallow();
 		clone.isExecuted = false;
+		clone.envMngr = null;
+		clone.environmentMap = null;
+		clone.envPathHash = HASH_NOT_INITIALIZED;
 		return clone;
 	}
 
@@ -783,6 +872,7 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 		int result = super.hashCode();
 		result = prime * result + (isConsoleEnabled ? 1231 : 1237);
 		result = prime * result + (isExecuted ? 1231 : 1237);
+		result = prime * result + envPathHash;
 		return result;
 	}
 
@@ -792,12 +882,14 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 			return true;
 		if (!super.equals(obj))
 			return false;
-		if (!(obj instanceof AbstractBuiltinSpecsDetector))
+		if (getClass() != obj.getClass())
 			return false;
 		AbstractBuiltinSpecsDetector other = (AbstractBuiltinSpecsDetector) obj;
 		if (isConsoleEnabled != other.isConsoleEnabled)
 			return false;
 		if (isExecuted != other.isExecuted)
+			return false;
+		if (envPathHash != other.envPathHash)
 			return false;
 		return true;
 	}

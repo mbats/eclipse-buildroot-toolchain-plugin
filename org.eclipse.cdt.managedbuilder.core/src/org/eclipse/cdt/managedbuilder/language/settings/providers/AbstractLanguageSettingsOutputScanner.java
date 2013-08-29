@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2012 Andrew Gvozdev and others.
+ * Copyright (c) 2009, 2013 Andrew Gvozdev and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -25,6 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.cdt.core.CCorePlugin;
+import org.eclipse.cdt.core.EFSExtensionProvider;
 import org.eclipse.cdt.core.ErrorParserManager;
 import org.eclipse.cdt.core.cdtvariables.CdtVariableException;
 import org.eclipse.cdt.core.cdtvariables.ICdtVariableManager;
@@ -39,6 +40,7 @@ import org.eclipse.cdt.core.settings.model.util.CDataUtil;
 import org.eclipse.cdt.internal.core.XmlUtil;
 import org.eclipse.cdt.managedbuilder.core.ManagedBuilderCorePlugin;
 import org.eclipse.cdt.utils.EFSExtensionManager;
+import org.eclipse.cdt.utils.cdtvariables.CdtVariableResolver;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFolder;
@@ -70,6 +72,8 @@ import org.w3c.dom.Element;
  */
 public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSettingsSerializableProvider implements ICBuildOutputParser {
 	protected static final String ATTR_KEEP_RELATIVE_PATHS = "keep-relative-paths"; //$NON-NLS-1$
+	// evaluates to "/${ProjName)/"
+	private static final String PROJ_NAME_PREFIX = '/' + CdtVariableResolver.createVariableReference(CdtVariableResolver.VAR_PROJ_NAME) + '/';
 
 	protected ICConfigurationDescription currentCfgDescription = null;
 	protected IWorkingDirectoryTracker cwdTracker = null;
@@ -79,6 +83,37 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 
 	protected String parsedResourceName = null;
 	protected boolean isResolvingPaths = true;
+
+	/** @since 8.2 */
+	protected EFSExtensionProvider efsProvider = null;
+
+	private static final EFSExtensionProvider efsProviderDefault = new EFSExtensionProvider() {
+		final EFSExtensionManager efsManager = EFSExtensionManager.getDefault();
+		@Override
+		public String getPathFromURI(URI locationURI) {
+			return efsManager.getPathFromURI(locationURI);
+		}
+		@Override
+		public URI getLinkedURI(URI locationURI) {
+			return efsManager.getLinkedURI(locationURI);
+		}
+		@Override
+		public URI createNewURIFromPath(URI locationOnSameFilesystem, String path) {
+			return efsManager.createNewURIFromPath(locationOnSameFilesystem, path);
+		}
+		@Override
+		public String getMappedPath(URI locationURI) {
+			return efsManager.getMappedPath(locationURI);
+		}
+		@Override
+		public boolean isVirtual(URI locationURI) {
+			return efsManager.isVirtual(locationURI);
+		}
+		@Override
+		public URI append(URI baseURI, String extension) {
+			return efsManager.append(baseURI, extension);
+		}
+	};
 
 	/**
 	 * Abstract class defining common functionality for option parsers.
@@ -373,6 +408,7 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 		this.currentCfgDescription = cfgDescription;
 		this.currentProject = cfgDescription != null ? cfgDescription.getProjectDescription().getProject() : null;
 		this.cwdTracker = cwdTracker;
+		this.efsProvider = getEFSProvider();
 	}
 
 	@Override
@@ -429,7 +465,11 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 							if (isResolvingPaths && (optionParser.isForFile() || optionParser.isForFolder())) {
 								URI baseURI = mappedRootURI;
 								if (buildDirURI != null && !new Path(optionParser.parsedName).isAbsolute()) {
-									baseURI = EFSExtensionManager.getDefault().append(mappedRootURI, buildDirURI.getPath());
+									if (mappedRootURI != null) {
+										baseURI = efsProvider.append(mappedRootURI, buildDirURI.getPath());
+									} else {
+										baseURI = buildDirURI;
+									}
 								}
 								entry = createResolvedPathEntry(optionParser, optionParser.parsedName, 0, baseURI);
 							} else {
@@ -494,7 +534,7 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 			}
 		}
 		// this creates URI with schema and other components from resourceURI but path as mappedRoot
-		URI uri = EFSExtensionManager.getDefault().createNewURIFromPath(resourceURI, mappedRoot);
+		URI uri = efsProvider.createNewURIFromPath(resourceURI, mappedRoot);
 		return uri;
 	}
 
@@ -513,9 +553,9 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 		if (currentResource != null && parsedResourceName != null && !new Path(parsedResourceName).isAbsolute()) {
 			cwdURI = findBaseLocationURI(currentResource.getLocationURI(), parsedResourceName);
 		}
-		String cwdPath = cwdURI != null ? EFSExtensionManager.getDefault().getPathFromURI(cwdURI) : null;
+		String cwdPath = cwdURI != null ? efsProvider.getPathFromURI(cwdURI) : null;
 		if (cwdPath != null && mappedRootURI != null) {
-			buildDirURI = EFSExtensionManager.getDefault().append(mappedRootURI, cwdPath);
+			buildDirURI = efsProvider.append(mappedRootURI, cwdPath);
 		} else {
 			buildDirURI = cwdURI;
 		}
@@ -607,21 +647,21 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 	}
 
 	/**
-	 * Find resource in the workspace for a given URI with a preference for the resource
+	 * Find file resource in the workspace for a given URI with a preference for the resource
 	 * to reside in the given project.
 	 */
-	private static IResource findFileForLocationURI(URI uri, IProject preferredProject) {
+	private static IResource findFileForLocationURI(URI uri, IProject preferredProject, boolean checkExistence) {
 		IResource sourceFile = null;
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 		IResource[] resources = root.findFilesForLocationURI(uri);
-		if (resources.length > 0) {
-			sourceFile = resources[0];
-			if (preferredProject != null) {
-				for (IResource rc : resources) {
-					if (rc.getProject().equals(preferredProject)) {
-						sourceFile = rc;
-						break;
-					}
+		for (IResource rc : resources) {
+			if (!checkExistence || rc.isAccessible()) {
+				if (rc.getProject().equals(preferredProject)) {
+					sourceFile = rc;
+					break;
+				}
+				if (sourceFile == null) {
+					sourceFile = rc;
 				}
 			}
 		}
@@ -632,11 +672,11 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 	 * Return a resource in workspace corresponding the given folder {@link URI} preferable residing in
 	 * the provided project.
 	 */
-	private static IResource findContainerForLocationURI(URI uri, IProject preferredProject) {
+	private static IResource findContainerForLocationURI(URI uri, IProject preferredProject, boolean checkExistence) {
 		IResource resource = null;
 		IResource[] resources = ResourcesPlugin.getWorkspace().getRoot().findContainersForLocationURI(uri);
 		for (IResource rc : resources) {
-			if ((rc instanceof IProject || rc instanceof IFolder)) { // treat IWorkspaceRoot as non-workspace path
+			if ((rc instanceof IProject || rc instanceof IFolder) && (!checkExistence || rc.isAccessible())) { // treat IWorkspaceRoot as non-workspace path
 				if (rc.getProject().equals(preferredProject)) {
 					resource = rc;
 					break;
@@ -667,25 +707,36 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 		// try to find absolute path in the workspace
 		if (sourceFile == null && new Path(parsedResourceName).isAbsolute()) {
 			URI uri = org.eclipse.core.filesystem.URIUtil.toURI(parsedResourceName);
-			sourceFile = findFileForLocationURI(uri, currentProject);
+			sourceFile = findFileForLocationURI(uri, currentProject, /*checkExistence*/ true);
 		}
 
 		// try last known current working directory from build output
 		if (sourceFile == null && cwdTracker != null) {
 			URI cwdURI = cwdTracker.getWorkingDirectoryURI();
 			if (cwdURI != null) {
-				URI uri = EFSExtensionManager.getDefault().append(cwdURI, parsedResourceName);
-				sourceFile = findFileForLocationURI(uri, currentProject);
+				URI uri = efsProvider.append(cwdURI, parsedResourceName);
+				sourceFile = findFileForLocationURI(uri, currentProject, /*checkExistence*/ true);
 			}
 		}
 
 		// try path relative to build dir from configuration
 		if (sourceFile == null && currentCfgDescription != null) {
 			IPath builderCWD = currentCfgDescription.getBuildSetting().getBuilderCWD();
-			if (builderCWD!=null) {
+			if (builderCWD != null) {
+				String strBuilderCWD = builderCWD.toString();
+				try {
+					ICdtVariableManager varManager = CCorePlugin.getDefault().getCdtVariableManager();
+					strBuilderCWD = varManager.resolveValue(strBuilderCWD, "", null, currentCfgDescription); //$NON-NLS-1$
+				} catch (Exception e) {
+					@SuppressWarnings("nls")
+					String msg = "Exception trying to resolve value [" + strBuilderCWD + "]";
+					ManagedBuilderCorePlugin.log(new Status(IStatus.ERROR, ManagedBuilderCorePlugin.PLUGIN_ID, msg, e));
+				}
+				builderCWD = new Path(strBuilderCWD);
+
 				IPath path = builderCWD.append(parsedResourceName);
 				URI uri = org.eclipse.core.filesystem.URIUtil.toURI(path);
-				sourceFile = findFileForLocationURI(uri, currentProject);
+				sourceFile = findFileForLocationURI(uri, currentProject, /*checkExistence*/ true);
 			}
 		}
 
@@ -804,7 +855,7 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 	 * @param baseURI - base {@link URI} where path to the resource is rooted
 	 * @return {@link URI} of the resource
 	 */
-	private static URI determineMappedURI(String pathStr, URI baseURI) {
+	private URI determineMappedURI(String pathStr, URI baseURI) {
 		URI uri = null;
 
 		if (baseURI == null) {
@@ -819,9 +870,9 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 		} else {
 			// location on a remote file-system
 			IPath path = new Path(pathStr); // use canonicalized path here, in particular replace all '\' with '/' for Windows paths
-			URI remoteUri = EFSExtensionManager.getDefault().append(baseURI, path.toString());
+			URI remoteUri = efsProvider.append(baseURI, path.toString());
 			if (remoteUri != null) {
-				String localPath = EFSExtensionManager.getDefault().getMappedPath(remoteUri);
+				String localPath = efsProvider.getMappedPath(remoteUri);
 				if (localPath != null) {
 					uri = org.eclipse.core.filesystem.URIUtil.toURI(localPath);
 				}
@@ -861,15 +912,21 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 	/**
 	 * Determine which resource in workspace is the best fit to parsedName passed.
 	 */
-	private static IResource resolveResourceInWorkspace(String parsedName, IProject preferredProject, Set<String> referencedProjectsNames) {
+	private IResource findBestFitInWorkspace(String parsedName) {
+		Set<String> referencedProjectsNames = new LinkedHashSet<String>();
+		if (currentCfgDescription != null) {
+			Map<String,String> refs = currentCfgDescription.getReferenceInfo();
+			referencedProjectsNames.addAll(refs.keySet());
+		}
+
 		IPath path = new Path(parsedName);
 		if (path.equals(new Path(".")) || path.equals(new Path(".."))) { //$NON-NLS-1$ //$NON-NLS-2$
 			return null;
 		}
 
 		// prefer current project
-		if (preferredProject != null) {
-			List<IResource> result = findPathInFolder(path, preferredProject);
+		if (currentProject != null) {
+			List<IResource> result = findPathInFolder(path, currentProject);
 			int size = result.size();
 			if (size == 1) { // found the one
 				return result.get(0);
@@ -907,7 +964,7 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 		if (projects.length > 0) {
 			IResource rc = null;
 			for (IProject prj : projects) {
-				if (!prj.equals(preferredProject) && !referencedProjectsNames.contains(prj.getName()) && prj.isOpen()) {
+				if (!prj.equals(currentProject) && !referencedProjectsNames.contains(prj.getName()) && prj.isOpen()) {
 					List<IResource> result = findPathInFolder(path, prj);
 					int size = result.size();
 					if (size == 1 && rc == null) {
@@ -929,13 +986,13 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 	}
 
 	/**
-	 * Get location on the local file-system considering possible mapping by {@link EFSExtensionManager}.
+	 * Get location on the local file-system considering possible mapping by EFS provider. See {@link EFSExtensionManager}.
 	 */
-	private static IPath getFilesystemLocation(URI uri) {
+	private IPath getFilesystemLocation(URI uri) {
 		if (uri == null)
 			return null;
 
-		String pathStr = EFSExtensionManager.getDefault().getMappedPath(uri);
+		String pathStr = efsProvider.getMappedPath(uri);
 		uri = org.eclipse.core.filesystem.URIUtil.toURI(pathStr);
 
 		if (uri != null && uri.isAbsolute()) {
@@ -956,60 +1013,122 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 	/**
 	 * Resolve and create language settings path entry.
 	 */
-	private ICLanguageSettingEntry createResolvedPathEntry(AbstractOptionParser optionParser,
-			String parsedPath, int flag, URI baseURI) {
-
-		String resolvedPath = null;
-		int resolvedFlag = 0;
-
+	private ICLanguageSettingEntry createResolvedPathEntry(AbstractOptionParser optionParser, String parsedPath, int flag, URI baseURI) {
 		URI uri = determineMappedURI(parsedPath, baseURI);
-		IResource rc = null;
+		boolean isRelative = !new Path(parsedPath).isAbsolute();
+		// is mapped something that is not a project root
+		boolean isRemapped = baseURI != null && currentProject != null && !baseURI.equals(currentProject.getLocationURI());
+		boolean presentAsRelative = isRelative || isRemapped;
 
-		// Try to resolve in the workspace
+		ICLanguageSettingEntry entry = resolvePathEntryInWorkspace(optionParser, uri, flag, presentAsRelative);
+		if (entry != null) {
+			return entry;
+		}
+		entry = resolvePathEntryInFilesystem(optionParser, uri, flag);
+		if (entry != null) {
+			return entry;
+		}
+		entry = resolvePathEntryInWorkspaceAsBestFit(optionParser, parsedPath, flag, presentAsRelative);
+		if (entry != null) {
+			return entry;
+		}
+		entry = resolvePathEntryInWorkspaceToNonexistingResource(optionParser, uri, flag, presentAsRelative);
+		if (entry != null) {
+			return entry;
+		}
+		entry = resolvePathEntryInFilesystemToNonExistingResource(optionParser, uri, flag);
+		if (entry != null) {
+			return entry;
+		}
+		return optionParser.createEntry(parsedPath, parsedPath, flag);
+	}
+
+	/**
+	 * Create a language settings entry for a given resource.
+	 * This will represent relative path using CDT variable ${ProjName}.
+	 */
+	private ICLanguageSettingEntry createPathEntry(AbstractOptionParser optionParser, IResource rc, boolean isRelative, int flag) {
+		String path;
+		if (isRelative && rc.getProject().equals(currentProject)) {
+			path = PROJ_NAME_PREFIX + rc.getFullPath().removeFirstSegments(1);
+			flag = flag | ICSettingEntry.VALUE_WORKSPACE_PATH;
+		} else {
+			path = rc.getFullPath().toString();
+			flag = flag | ICSettingEntry.VALUE_WORKSPACE_PATH | ICSettingEntry.RESOLVED;
+		}
+		return optionParser.createEntry(path, path, flag);
+	}
+
+	/**
+	 * Find an existing resource in the workspace and create a language settings entry for it.
+	 */
+	private ICLanguageSettingEntry resolvePathEntryInWorkspace(AbstractOptionParser optionParser, URI uri, int flag, boolean isRelative) {
 		if (uri != null && uri.isAbsolute()) {
+			IResource rc = null;
 			if (optionParser.isForFolder()) {
-				rc = findContainerForLocationURI(uri, currentProject);
+				rc = findContainerForLocationURI(uri, currentProject, /*checkExistence*/ true);
 			} else if (optionParser.isForFile()) {
-				rc = findFileForLocationURI(uri, currentProject);
+				rc = findFileForLocationURI(uri, currentProject, /*checkExistence*/ true);
 			}
 			if (rc != null) {
-				resolvedPath = rc.getFullPath().toString();
-				resolvedFlag = flag | ICSettingEntry.VALUE_WORKSPACE_PATH | ICSettingEntry.RESOLVED;
+				return createPathEntry(optionParser, rc, isRelative, flag);
 			}
 		}
+		return null;
+	}
 
-		// Try to resolve on the file-system
-		if (resolvedPath == null) {
-			IPath path = getFilesystemLocation(uri);
-			if (path != null && new File(path.toString()).exists()) {
-				resolvedPath = path.toString();
-				resolvedFlag = flag;
-			}
-			if (resolvedPath == null) {
-				Set<String> referencedProjectsNames = new LinkedHashSet<String>();
-				if (currentCfgDescription!=null) {
-					Map<String,String> refs = currentCfgDescription.getReferenceInfo();
-					referencedProjectsNames.addAll(refs.keySet());
-				}
-				IResource resource = resolveResourceInWorkspace(parsedPath, currentProject, referencedProjectsNames);
-				if (resource != null) {
-					resolvedPath = resource.getFullPath().toString();
-					resolvedFlag = flag | ICSettingEntry.VALUE_WORKSPACE_PATH | ICSettingEntry.RESOLVED;
-				}
-			}
-			if (resolvedPath == null && path != null) {
-				resolvedPath = path.toString();
-				resolvedFlag = flag;
+	/**
+	 * Find a resource on the file-system and create a language settings entry for it.
+	 */
+	private ICLanguageSettingEntry resolvePathEntryInFilesystem(AbstractOptionParser optionParser, URI uri, int flag) {
+		IPath location = getFilesystemLocation(uri);
+		if (location != null) {
+			String loc = location.toString();
+			if (new File(loc).exists()) {
+				return optionParser.createEntry(loc, loc, flag);
 			}
 		}
+		return null;
+	}
 
-		// if cannot resolve keep parsed path
-		if (resolvedPath == null) {
-			resolvedPath = parsedPath;
-			resolvedFlag = flag;
+	/**
+	 * Find a best fit for the resource in the workspace and create a language settings entry for it.
+	 */
+	private ICLanguageSettingEntry resolvePathEntryInWorkspaceAsBestFit(AbstractOptionParser optionParser, String parsedPath, int flag, boolean isRelative) {
+		IResource rc = findBestFitInWorkspace(parsedPath);
+		if (rc != null) {
+			return createPathEntry(optionParser, rc, isRelative, flag);
 		}
+		return null;
+	}
 
-		return optionParser.createEntry(resolvedPath, resolvedPath, resolvedFlag);
+	/**
+	 * Try to map a resource in the workspace even if it does not exist and create a language settings entry for it.
+	 */
+	private ICLanguageSettingEntry resolvePathEntryInWorkspaceToNonexistingResource(AbstractOptionParser optionParser, URI uri, int flag, boolean isRelative) {
+		if (uri != null && uri.isAbsolute()) {
+			IResource rc = null;
+			if (optionParser.isForFolder()) {
+				rc = findContainerForLocationURI(uri, currentProject, /*checkExistence*/ false);
+			} else if (optionParser.isForFile()) {
+				rc = findFileForLocationURI(uri, currentProject, /*checkExistence*/ false);
+			}
+			if (rc != null) {
+				return createPathEntry(optionParser, rc, isRelative, flag);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Try to map a resource on the file-system even if it does not exist and create a language settings entry for it.
+	 */
+	private ICLanguageSettingEntry resolvePathEntryInFilesystemToNonExistingResource(AbstractOptionParser optionParser, URI uri, int flag) {
+		IPath location = getFilesystemLocation(uri);
+		if (location != null) {
+			return optionParser.createEntry(location.toString(), location.toString(), flag);
+		}
+		return null;
 	}
 
 	/**
@@ -1064,6 +1183,20 @@ public abstract class AbstractLanguageSettingsOutputScanner extends LanguageSett
 		String pattern = expressionLogicalOr(fileExts);
 
 		return pattern;
+	}
+	
+	/**
+	 * This {@link EFSExtensionProvider} is capable to translate EFS paths to and from local
+	 * file-system. Added mostly for Cygwin translations.
+	 * 
+	 * This usage of {@link EFSExtensionProvider} is somewhat a misnomer. This provider is not
+	 * an "extension" provider but rather a wrapper on {@link EFSExtensionManager} which in fact
+	 * will use genuine {@link EFSExtensionProvider}s defined as extensions.
+	 *
+	 * @since 8.2
+	 */
+	protected EFSExtensionProvider getEFSProvider() {
+		return efsProviderDefault;
 	}
 
 	@Override
