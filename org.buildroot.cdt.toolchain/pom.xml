@@ -8,13 +8,13 @@
 	<parent>
 		<groupId>org.buildroot.cdt.toolchain.parent</groupId>
 		<artifactId>buildroot-parent</artifactId>
-		<version>3.0.0-SNAPSHOT</version>
+		<version>3.1.0-SNAPSHOT</version>
 		<relativePath>../org.buildroot.cdt.toolchain.build</relativePath>
 	</parent>
 
 	<artifactId>org.buildroot.cdt.toolchain</artifactId>
 	<packaging>eclipse-plugin</packaging>
-	<version>3.0.0-SNAPSHOT</version>
+	<version>3.1.0-SNAPSHOT</version>
 
 
 	<build>
