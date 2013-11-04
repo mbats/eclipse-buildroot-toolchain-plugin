@@ -14,7 +14,7 @@
 
 	<artifactId>org.eclipse.cdt.managedbuilder.core</artifactId>
 	<packaging>eclipse-plugin</packaging>
-	<version>8.2.0.qualifier</version>
+	<version>8.2.1.qualifier</version>
 
 
 	<build>
