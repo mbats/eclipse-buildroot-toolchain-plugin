@@ -125,8 +125,8 @@ public class BuildrootActivator extends AbstractUIPlugin {
 		}
 	}
 
-	public static String getSolibPath(String name) {
-		return debuggerConfigurations.get(name).getSolibPath();
+	public static String getGdbInitPath(String name) {
+		return debuggerConfigurations.get(name).getGdbInitPath();
 	}
 
 	public static String getDebugName(String name) {

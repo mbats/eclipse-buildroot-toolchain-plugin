@@ -67,13 +67,11 @@ public class BuildrootLaunchConfigurationTabGroup extends
 			configuration.setAttribute(
 					IMILaunchConfigurationConstants.ATTR_DEBUG_NAME, debugName);
 
-			String solibPath = BuildrootActivator.getSolibPath(configuration
-					.getType().getName());
-			List<String> solibPaths = new ArrayList<String>();
-			solibPaths.add(solibPath);
+			String gdbInitPath = BuildrootActivator.getGdbInitPath(configuration
+					.getType().getName());			
 			configuration.setAttribute(
-					IMILaunchConfigurationConstants.ATTR_DEBUGGER_SOLIB_PATH,
-					solibPaths);
+					IMILaunchConfigurationConstants.ATTR_GDB_INIT, gdbInitPath);
+
 		} catch (CoreException e) {
 			BuildrootActivator.getDefault().error(
 					"Launch configuration is not valid", e);

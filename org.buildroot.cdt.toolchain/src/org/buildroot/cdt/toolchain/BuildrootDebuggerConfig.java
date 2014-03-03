@@ -9,11 +9,16 @@
  *******************************************************************************/
 package org.buildroot.cdt.toolchain;
 
-public class BuildrootDebuggerConfig {
-	private String solibPath;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 
-	public String getSolibPath() {
-		return solibPath;
+public class BuildrootDebuggerConfig {
+	private String gdbInitPath;
+
+	public String getGdbInitPath() {
+		return gdbInitPath;
 	}
 
 	public String getDebugName() {
@@ -24,6 +29,25 @@ public class BuildrootDebuggerConfig {
 
 	public BuildrootDebuggerConfig(String prefix, String path) {
 		debugName = BuildrootUtils.getPrefixedToolPath(prefix, path, "gdb");
-		solibPath = path + "/staging";
+		String buildrootDirPath = path + "/staging/usr/share/buildroot/";
+		gdbInitPath = buildrootDirPath + "gdbinit";
+
+		File buildrootDir = new File(buildrootDirPath);
+		buildrootDir.mkdirs();
+		File gdbInitFile = new File(gdbInitPath);
+		if (!gdbInitFile.exists()) {
+			PrintWriter writer;
+			try {
+				writer = new PrintWriter(gdbInitFile, "UTF-8");
+				writer.println("set sysroot " + path + "/staging");
+				writer.close();
+			} catch (FileNotFoundException e) {
+				BuildrootActivator.getDefault().error(
+						"gdbinit file can not be created", e);
+			} catch (UnsupportedEncodingException e) {
+				BuildrootActivator.getDefault().error(
+						"gdbinit file can not be created", e);
+			}
+		}
 	}
 }
