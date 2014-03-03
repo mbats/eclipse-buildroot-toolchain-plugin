@@ -18,7 +18,7 @@
    </license>
 
    <requires>
-      <import feature="org.eclipse.cdt.platform" version="8.2.1.201309101708" patch="true"/>
+      <import feature="org.eclipse.cdt.platform" version="8.3.0.201402142303" patch="true"/>
    </requires>
 
    <plugin

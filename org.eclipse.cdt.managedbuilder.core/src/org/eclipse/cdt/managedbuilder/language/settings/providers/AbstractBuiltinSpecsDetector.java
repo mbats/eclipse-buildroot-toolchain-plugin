@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     Andrew Gvozdev - initial API and implementation
+ *     Liviu Ionescu - Bug 413678: trigger discovery after command line change
  *******************************************************************************/
 
 package org.eclipse.cdt.managedbuilder.language.settings.providers;
@@ -51,6 +52,7 @@ import org.eclipse.cdt.internal.core.envvar.EnvironmentVariableManager;
 import org.eclipse.cdt.managedbuilder.core.ManagedBuilderCorePlugin;
 import org.eclipse.cdt.managedbuilder.internal.core.ManagedMakeMessages;
 import org.eclipse.cdt.utils.CommandLineUtil;
+import org.eclipse.cdt.utils.PathUtil;
 import org.eclipse.cdt.utils.envvar.IEnvironmentChangeEvent;
 import org.eclipse.cdt.utils.envvar.IEnvironmentChangeListener;
 import org.eclipse.core.resources.IMarker;
@@ -93,6 +95,8 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	public static final String JOB_FAMILY_BUILTIN_SPECS_DETECTOR = "org.eclipse.cdt.managedbuilder.AbstractBuiltinSpecsDetector"; //$NON-NLS-1$
 
 	protected static final String COMPILER_MACRO = "${COMMAND}"; //$NON-NLS-1$
+	/** @since 8.3 */
+	protected static final String FLAGS_MACRO = "${FLAGS}"; //$NON-NLS-1$
 	protected static final String SPEC_FILE_MACRO = "${INPUTS}"; //$NON-NLS-1$
 	protected static final String SPEC_EXT_MACRO = "${EXT}"; //$NON-NLS-1$
 	protected static final String SPEC_FILE_BASE = "spec"; //$NON-NLS-1$
@@ -132,7 +136,7 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	protected volatile boolean isExecuted = false;
 
 	private static final int HASH_NOT_INITIALIZED = -1;
-	private int envPathHash = HASH_NOT_INITIALIZED;
+	private long envPathHash = HASH_NOT_INITIALIZED;
 
 	private BuildRunnerHelper buildRunnerHelper;
 	private SDMarkerGenerator markerGenerator = new SDMarkerGenerator();
@@ -305,6 +309,11 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 				if (compiler != null)
 					cmd = cmd.replace(COMPILER_MACRO, compiler);
 			}
+			if (cmd.contains(FLAGS_MACRO)) {
+				String flags = getToolOptions(languageId);
+				if (flags != null)
+					cmd = cmd.replace(FLAGS_MACRO, flags);
+			}
 			if (cmd.contains(SPEC_FILE_MACRO)) {
 				String specFileName = getSpecFile(languageId);
 				if (specFileName != null)
@@ -396,6 +405,52 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	}
 
 	/**
+	 * Calculate hash code for the environment
+	 */
+	private long calculateEnvHash() {
+		String envPathValue = environmentMap.get(ENV_PATH);
+		long envHashNew = envPathValue != null ? envPathValue.hashCode() : 0;
+
+		List<String> languageIds = getLanguageScope();
+		if (languageIds == null) {
+			languageIds = new ArrayList<String>(1);
+			// "null" language indicates that the provider provides for any language 
+			languageIds.add(null);
+		}
+		for (String languageId : languageIds) {
+			try {
+				String command = resolveCommand(languageId);
+				if (command != null) {
+					envHashNew = 31*envHashNew + command.hashCode();
+				}
+
+				String[] cmdArray = CommandLineUtil.argumentsToArray(command);
+				if (cmdArray != null && cmdArray.length > 0) {
+					IPath location = new Path(cmdArray[0]);
+					if (!location.isAbsolute()) {
+						location = PathUtil.findProgramLocation(cmdArray[0], envPathValue);
+					}
+					if (location != null) {
+						java.io.File file = new java.io.File(location.toString());
+						try {
+							// handles symbolic links as java.io.File.getCanonicalPath() resolves symlinks on UNIX
+							file = file.getCanonicalFile();
+						} catch (IOException e) {
+							ManagedBuilderCorePlugin.log(e);
+						}
+						long lastModified = file.lastModified();
+						envHashNew = 31*envHashNew + location.hashCode();
+						envHashNew = 31*envHashNew + lastModified;
+					}
+				}
+			} catch (CoreException e) {
+				ManagedBuilderCorePlugin.log(e);
+			}
+		}
+		return envHashNew;
+	}
+
+	/**
 	 * This method does 2 related things:
 	 * <br>
 	 * 1. Validate environment, i.e. check that environment for running the command has not changed.
@@ -408,12 +463,12 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 	 * @since 8.2
 	 */
 	protected boolean validateEnvironment() {
-		String envPathValue = environmentMap.get(ENV_PATH);
-		int envPathValueHash = envPathValue != null ? envPathValue.hashCode() : 0;
-		if (envPathValueHash != envPathHash) {
-			envPathHash = envPathValueHash;
+		long envHashNew = calculateEnvHash();
+		if (envHashNew != envPathHash) {
+			envPathHash = envHashNew;
 			return false;
 		}
+
 		return true;
 	}
 
@@ -814,12 +869,25 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 		return ext;
 	}
 
+	/**
+	 * Determine additional options to pass to scanner discovery command.
+	 * These options are intended to come from the tool-chain.
+	 *
+	 * @param languageId - language ID.
+	 * @return additional options to pass to scanner discovery command.
+	 *
+	 * @since 8.3
+	 */
+	protected String getToolOptions(String languageId) {
+		return ""; //$NON-NLS-1$
+	}
+
 	@Override
 	public Element serializeAttributes(Element parentElement) {
 		Element elementProvider = super.serializeAttributes(parentElement);
 		elementProvider.setAttribute(ATTR_CONSOLE, Boolean.toString(isConsoleEnabled));
 		if (envPathHash != HASH_NOT_INITIALIZED) {
-			elementProvider.setAttribute(ATTR_ENV_HASH, Integer.toString(envPathHash));
+			elementProvider.setAttribute(ATTR_ENV_HASH, Long.toString(envPathHash));
 		}
 		return elementProvider;
 	}
@@ -837,7 +905,7 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 		String envPathHashStr = XmlUtil.determineAttributeValue(providerNode, ATTR_ENV_HASH);
 		if (envPathHashStr != null) {
 			try {
-				envPathHash = Integer.parseInt(envPathHashStr);
+				envPathHash = Long.parseLong(envPathHashStr);
 			} catch (Exception e) {
 				ManagedBuilderCorePlugin.log(new Status(IStatus.ERROR, ManagedBuilderCorePlugin.PLUGIN_ID, "Wrong integer format [" + envPathHashStr + "]", e)); //$NON-NLS-1$ //$NON-NLS-2$
 			}
@@ -882,7 +950,7 @@ public abstract class AbstractBuiltinSpecsDetector extends AbstractLanguageSetti
 		int result = super.hashCode();
 		result = prime * result + (isConsoleEnabled ? 1231 : 1237);
 		result = prime * result + (isExecuted ? 1231 : 1237);
-		result = prime * result + envPathHash;
+		result = prime * result + new Long(envPathHash).hashCode();
 		return result;
 	}
 

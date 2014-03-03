@@ -233,29 +233,33 @@ public class BuildEntryStorage extends AbstractEntryStorage {
 			List<UserEntryInfo> entryList = new ArrayList<UserEntryInfo>();
 			for (IOption opt : options) {
 				Option option = (Option)opt;
-				@SuppressWarnings("unchecked")
-				List<OptionStringValue> list = usr ? (List<OptionStringValue>)option.getExactValue() : (List<OptionStringValue>)option.getExactBuiltinsList();
-				if (list != null) {
-					SupplierBasedCdtVariableSubstitutor subst = createSubstitutor(option, false);
-					SupplierBasedCdtVariableSubstitutor bSVarsSubst = createSubstitutor(option, true);
-					for (int j = 0; j < list.size(); j++) {
-						OptionStringValue ve = list.get(j);
-						OptionStringValue[] rVes = resolve(ve, option, bSVarsSubst);
-						if (rVes.length == 0) {
-							// If not resolved, add EmptyEntryInfo based off the value entry
-							if (emptyValuesInfos != null) {
-								emptyValuesInfos.add(new EmptyEntryInfo(ve, j));
-							}
-						} else {
-							// If resolved, add each resolved entry as a separate UserEntryInfo
-							boolean isMultiple = rVes.length > 1;
-							List<UserEntryInfo> sequense = isMultiple ? new ArrayList<UserEntryInfo>(rVes.length) : null;
-							for (OptionStringValue rVe : rVes) {
-								ICLanguageSettingEntry entry = createUserEntry(option, rVe, flags, subst);
-								entryList.add(new UserEntryInfo(entry, ve, rVe, sequense));
+				try {
+					@SuppressWarnings("unchecked")
+					List<OptionStringValue> list = usr ? (List<OptionStringValue>)option.getExactValue() : (List<OptionStringValue>)option.getExactBuiltinsList();
+					if (list != null) {
+						SupplierBasedCdtVariableSubstitutor subst = createSubstitutor(option, false);
+						SupplierBasedCdtVariableSubstitutor bSVarsSubst = createSubstitutor(option, true);
+						for (int j = 0; j < list.size(); j++) {
+							OptionStringValue ve = list.get(j);
+							OptionStringValue[] rVes = resolve(ve, option, bSVarsSubst);
+							if (rVes.length == 0) {
+								// If not resolved, add EmptyEntryInfo based off the value entry
+								if (emptyValuesInfos != null) {
+									emptyValuesInfos.add(new EmptyEntryInfo(ve, j));
+								}
+							} else {
+								// If resolved, add each resolved entry as a separate UserEntryInfo
+								boolean isMultiple = rVes.length > 1;
+								List<UserEntryInfo> sequense = isMultiple ? new ArrayList<UserEntryInfo>(rVes.length) : null;
+								for (OptionStringValue rVe : rVes) {
+									ICLanguageSettingEntry entry = createUserEntry(option, rVe, flags, subst);
+									entryList.add(new UserEntryInfo(entry, ve, rVe, sequense));
+								}
 							}
 						}
 					}
+				} catch (Exception e) {
+					ManagedBuilderCorePlugin.log(e);
 				}
 			}
 
@@ -587,8 +591,61 @@ public class BuildEntryStorage extends AbstractEntryStorage {
 //		return new Object[] { value, Boolean.valueOf(false) };
 //	}
 
+	/**
+	 * Returns a string representing the workspace relative path with ${workspace_loc: stripped
+	 * or null if the String path doesn't contain workspace_loc
+	 * @param path String path to have workspace_loc removed
+	 * @return workspace path or null
+	 */
+	private static String locationToFullPath(String path){
+		path = path.trim();
+		// A path starting from "${workspace_loc}" is always a filesystem path.
+		// Only ${workspace_loc:/thing} is treated here as workspace path
+		if(!path.startsWith("${workspace_loc:"))  //$NON-NLS-1$
+			return null;
+		
+	
+		int index = -1;
+		int depth = 1;
+		for (int i = "${workspace_loc:".length(); i < path.length(); i++) { //$NON-NLS-1$
+			char c = path.charAt(i);
+			if (c == '}') {
+				depth--;
+				if (depth < 1) {
+					index = i;
+					break;
+				}
+			} else if (c == '{' && path.charAt(i-1) == '$') {
+				depth++;
+			}
+		}
+		
+		if(index == -1)
+			return null;
+
+		String varName = "workspace_loc"; //$NON-NLS-1$
+		String str1 = path.substring(2, index);
+		String result = null;
+		if(str1.startsWith(varName)){
+			String str2= str1.substring(varName.length());
+			if(str2.length() != 0){
+				if(str2.startsWith(":")){ //$NON-NLS-1$
+					result = str2.substring(1);
+				}
+			} else {
+				result = "/"; //$NON-NLS-1$
+			}
+			// If the user has a path like ${workspace_loc:/thing}/other/thing
+			// ensure we return /thing/other/thing
+			if (index < path.length() - 1)
+				result += path.substring(index + 1);
+		}
+
+		return result;
+	}
+
 	private static PathInfo optionPathValueToEntry(String str, SupplierBasedCdtVariableSubstitutor subst) {
-		String unresolvedStr = ManagedBuildManager.locationToFullPath(str);
+		String unresolvedStr = locationToFullPath(str);
 		boolean isWorkspacePath = false;
 		if (unresolvedStr == null) {
 			unresolvedStr = str;
