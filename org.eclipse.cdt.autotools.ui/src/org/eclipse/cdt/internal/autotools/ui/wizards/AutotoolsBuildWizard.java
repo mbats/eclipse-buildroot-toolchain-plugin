@@ -98,6 +98,8 @@ public class AutotoolsBuildWizard extends AbstractCWizard {
 
 				h.addTc(t);
 			}
+			if (h.getToolChainsCount() > 0)
+				items.add(new EntryDescriptor(pt.getId(), null, pt.getName(), true, h, null));
 
 			// Get the autotools project type and build wizard handler
 			if (AUTOTOOLS_PROJECTTYPE_ID.equals(pt.getId())) {
