@@ -45,7 +45,7 @@ public class BuildrootToolchainsProvider implements
 	 * for C and C++, pkg-config.
 	 * */
 	private enum BuildrootToolType {
-		ASSEMBLER, C_COMPILER, CC_COMPILER, C_LINKER, CC_LINKER, PKG_CONFIG
+		ASSEMBLER, C_COMPILER, CC_COMPILER, ARCHIVER, C_LINKER, CC_LINKER, PKG_CONFIG
 	}
 
 	@Override
@@ -142,8 +142,7 @@ public class BuildrootToolchainsProvider implements
 						"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier");
 		toolchain.setAttribute(ManagedConfigElementAttribute.id,
 				getAutotoolsToolchainIdentifier(path));
-		toolchain
-				.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		toolchain.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
 		toolchain.setAttribute(ManagedConfigElementAttribute.name, "Autotools "
 				+ BuildrootUtils.getToolName(architecture, path, null));
 		toolchain.setAttribute(ManagedConfigElementAttribute.osList,
@@ -225,7 +224,8 @@ public class BuildrootToolchainsProvider implements
 				BuildrootConfigElement.CDT_MANAGEDBUILD_C_COMPILER_INPUT);
 		inputType.setAttribute(ManagedConfigElementAttribute.id,
 				getIdentifier(path, toolType.name().toLowerCase() + ".input"));
-		inputType.setAttribute(ManagedConfigElementAttribute.scannerConfigDiscoveryProfileId,
+		inputType.setAttribute(
+				ManagedConfigElementAttribute.scannerConfigDiscoveryProfileId,
 				getScannerConfigProfileId(path, architecture, toolType));
 
 		tool.addChild(inputType);
@@ -265,8 +265,7 @@ public class BuildrootToolchainsProvider implements
 		BuildrootConfigElement projectType = new BuildrootConfigElement(
 				ManagedConfigElement.PROJECT_TYPE);
 		projectType
-				.setAttribute(
-						ManagedConfigElementAttribute.buildArtefactType,
+				.setAttribute(ManagedConfigElementAttribute.buildArtefactType,
 						"org.eclipse.linuxtools.cdt.autotools.core.buildArtefactType.autotools");
 		projectType.setAttribute(ManagedConfigElementAttribute.id,
 				getIdentifier(path, "autotools"));
@@ -380,8 +379,7 @@ public class BuildrootToolchainsProvider implements
 						"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier");
 		toolchain.setAttribute(ManagedConfigElementAttribute.id,
 				getToolchainIdentifier(path));
-		toolchain
-				.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
+		toolchain.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
 		toolchain.setAttribute(ManagedConfigElementAttribute.name,
 				BuildrootUtils.getToolName(architecture, path, null));
 		toolchain.setAttribute(ManagedConfigElementAttribute.osList,
@@ -402,6 +400,10 @@ public class BuildrootToolchainsProvider implements
 		// C compiler.
 		toolchain.addChild(createTool(path, prefix, architecture,
 				BuildrootToolType.C_COMPILER));
+
+		// Create Archiver
+		toolchain.addChild(createTool(path, prefix, architecture,
+				BuildrootToolType.ARCHIVER));
 
 		// Create C Linker
 		toolchain.addChild(createTool(path, prefix, architecture,
@@ -541,6 +543,16 @@ public class BuildrootToolchainsProvider implements
 			toolDescription = "C++ Compiler";
 			break;
 
+		case ARCHIVER:
+			superClass = "cdt.managedbuild.tool.gnu.archiver";
+			natureFilter = "both";
+			toolName = "ar";
+			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
+					toolName);
+			idSuffix = "archiver";
+			toolDescription = "Archiver";
+			break;
+
 		case C_LINKER:
 			superClass = "cdt.managedbuild.tool.gnu.c.linker";
 			natureFilter = "cnature";
@@ -627,7 +639,8 @@ public class BuildrootToolchainsProvider implements
 		inputType.setAttribute(ManagedConfigElementAttribute.superClass,
 				superClass);
 		inputType.setAttribute(ManagedConfigElementAttribute.id, id);
-		inputType.setAttribute(ManagedConfigElementAttribute.scannerConfigDiscoveryProfileId,
+		inputType.setAttribute(
+				ManagedConfigElementAttribute.scannerConfigDiscoveryProfileId,
 				scannerConfigProfileId);
 
 		// Get the scanner configuration discovery profile
@@ -730,10 +743,9 @@ public class BuildrootToolchainsProvider implements
 			String architecture) {
 		BuildrootConfigElement targetPlatform = new BuildrootConfigElement(
 				ManagedConfigElement.TARGET_PLATFORM);
-		targetPlatform.setAttribute(ManagedConfigElementAttribute.archList,
-				ALL);
-		targetPlatform.setAttribute(
-				ManagedConfigElementAttribute.binaryParser,
+		targetPlatform
+				.setAttribute(ManagedConfigElementAttribute.archList, ALL);
+		targetPlatform.setAttribute(ManagedConfigElementAttribute.binaryParser,
 				"org.eclipse.cdt.core.GNU_ELF");
 		targetPlatform.setAttribute(ManagedConfigElementAttribute.id,
 				getIdentifier(path, "platform.base"));
