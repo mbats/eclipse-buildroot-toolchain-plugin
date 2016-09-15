@@ -61,7 +61,7 @@
 		<repository>
 			<id>Pkg-config Eclipse Support</id>
 			<layout>p2</layout>
-			<url>http://www.petrituononen.com/pkg-config-support-for-eclipse-cdt/update</url>
+                        <url>https://raw.githubusercontent.com/TuononenP/pkg-config.p2/master</url>
 		</repository>
 	</repositories>
 
