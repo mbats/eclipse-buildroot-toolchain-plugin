@@ -570,7 +570,7 @@ public class BuildrootToolchainsProvider implements
 			toolPath = BuildrootUtils.getPrefixedToolPath(prefix, path,
 					toolName);
 			idSuffix = "cc.linker";
-			toolDescription = "CC Linker";
+			toolDescription = "C++ Linker";
 			break;
 
 		case PKG_CONFIG:
