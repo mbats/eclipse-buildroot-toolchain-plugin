@@ -478,11 +478,11 @@ public class BuildrootToolchainsProvider implements
 	}
 
 	private String getToolchainIdentifier(String path) {
-		return getIdentifier(path, ".toolchain.base");
+		return getIdentifier(path, "toolchain.base");
 	}
 
 	private String getAutotoolsToolchainIdentifier(String path) {
-		return getIdentifier(path, ".autotools.toolchain.base");
+		return getIdentifier(path, "autotools.toolchain.base");
 	}
 
 	private IManagedConfigElement createBuilder(String path, String architecture) {
