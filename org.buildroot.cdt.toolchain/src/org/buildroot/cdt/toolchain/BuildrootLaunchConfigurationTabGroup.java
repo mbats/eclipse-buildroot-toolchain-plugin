@@ -12,14 +12,17 @@ package org.buildroot.cdt.toolchain;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.cdt.debug.mi.core.IMILaunchConfigurationConstants;
-import org.eclipse.cdt.launch.remote.tabs.RemoteCDebuggerTab;
+import org.eclipse.cdt.dsf.gdb.IGDBLaunchConfigurationConstants;
 import org.eclipse.cdt.launch.remote.tabs.RemoteCMainTab;
+import org.eclipse.cdt.launch.remote.tabs.RemoteCDSFMainTab;
+import org.eclipse.cdt.launch.remote.tabs.RemoteCDSFDebuggerTab;
+import org.eclipse.cdt.launch.remote.tabs.RemoteDSFGDBDebuggerPage;
 import org.eclipse.cdt.launch.ui.CArgumentsTab;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.ui.AbstractLaunchConfigurationTabGroup;
 import org.eclipse.debug.ui.CommonTab;
+import org.eclipse.debug.ui.sourcelookup.SourceLookupTab;
 import org.eclipse.debug.ui.ILaunchConfigurationDialog;
 import org.eclipse.debug.ui.ILaunchConfigurationTab;
 
@@ -36,16 +39,17 @@ public class BuildrootLaunchConfigurationTabGroup extends
 	 * @param mode
 	 *            the launch configuration mode
 	 */
-	@SuppressWarnings("restriction")
 	public void createTabs(ILaunchConfigurationDialog dialog, String mode) {
 		if ("run".equals(mode)) {
 			ILaunchConfigurationTab[] tabs = new ILaunchConfigurationTab[] {
-					new RemoteCMainTab(), new CArgumentsTab(), new CommonTab() };
+					new RemoteCMainTab(), new CArgumentsTab(),
+					new SourceLookupTab(), new CommonTab() };
 			setTabs(tabs);
 		} else if ("debug".equals(mode)) {
 			ILaunchConfigurationTab[] tabs = new ILaunchConfigurationTab[] {
-					new RemoteCMainTab(), new CArgumentsTab(),
-					new RemoteCDebuggerTab(), new CommonTab() };
+					new RemoteCDSFMainTab(), new CArgumentsTab(),
+					new RemoteCDSFDebuggerTab(), new SourceLookupTab(),
+					new CommonTab() };
 			setTabs(tabs);
 		}
 	}
@@ -65,12 +69,12 @@ public class BuildrootLaunchConfigurationTabGroup extends
 			String debugName = BuildrootActivator.getDebugName(configuration
 					.getType().getName());
 			configuration.setAttribute(
-					IMILaunchConfigurationConstants.ATTR_DEBUG_NAME, debugName);
+					IGDBLaunchConfigurationConstants.ATTR_DEBUG_NAME, debugName);
 
 			String gdbInitPath = BuildrootActivator.getGdbInitPath(configuration
-					.getType().getName());			
+					.getType().getName());
 			configuration.setAttribute(
-					IMILaunchConfigurationConstants.ATTR_GDB_INIT, gdbInitPath);
+					IGDBLaunchConfigurationConstants.ATTR_GDB_INIT, gdbInitPath);
 
 		} catch (CoreException e) {
 			BuildrootActivator.getDefault().error(
