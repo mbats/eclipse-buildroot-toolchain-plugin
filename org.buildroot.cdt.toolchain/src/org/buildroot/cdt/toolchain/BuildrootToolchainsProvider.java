@@ -490,14 +490,8 @@ public class BuildrootToolchainsProvider implements
 		BuildrootConfigElement builder = new BuildrootConfigElement(
 				ManagedConfigElement.BUILDER);
 
-		builder.setAttribute(ManagedConfigElementAttribute.command, "make");
 		builder.setAttribute(ManagedConfigElementAttribute.id,
 				getIdentifier(path, "builder"));
-		builder.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
-		builder.setAttribute(ManagedConfigElementAttribute.name,
-				BuildrootUtils.getToolName(architecture, path, "builder"));
-		builder.setAttribute(
-				ManagedConfigElementAttribute.isVariableCaseSensitive, FALSE);
 		builder.setAttribute(ManagedConfigElementAttribute.superClass,
 				"cdt.managedbuild.target.gnu.builder");
 		return builder;
