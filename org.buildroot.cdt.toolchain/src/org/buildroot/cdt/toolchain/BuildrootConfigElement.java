@@ -29,7 +29,7 @@ public class BuildrootConfigElement implements IManagedConfigElement, IEnvironme
 	public static final String CDT_MANAGEDBUILDER_COMMAND_LINE_GENERATOR = "org.eclipse.cdt.managedbuilder.internal.core.ManagedCommandLineGenerator";
 
 	public enum ManagedConfigElementAttribute {
-		archList, configurationEnvironmentSupplier, osList, name, isAbstract, id, superClass, binaryParser, command, natureFilter, scannerConfigDiscoveryProfileId, isVariableCaseSensitive, category, resourceFilter, value, valueType, defaultValue, buildArtefactType, buildProperties, parent, isTest, projectEnvironmentSupplier, cleanCommand, commandLineGenerator;
+		archList, configurationEnvironmentSupplier, osList, name, isAbstract, id, superClass, binaryParser, command, natureFilter, scannerConfigDiscoveryProfileId, isVariableCaseSensitive, category, resourceFilter, value, valueType, defaultValue, buildArtefactType, buildProperties, parent, isTest, projectEnvironmentSupplier, cleanCommand, commandLineGenerator, languageSettingsProviders;
 	}
 
 	public enum ManagedConfigElement {

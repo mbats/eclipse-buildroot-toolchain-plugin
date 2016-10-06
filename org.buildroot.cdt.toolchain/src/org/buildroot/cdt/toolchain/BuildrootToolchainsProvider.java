@@ -140,6 +140,8 @@ public class BuildrootToolchainsProvider implements
 				.setAttribute(
 						ManagedConfigElementAttribute.configurationEnvironmentSupplier,
 						"org.buildroot.cdt.toolchain.BuildrootEnvironmentVariableSupplier");
+		toolchain.setAttribute(ManagedConfigElementAttribute.languageSettingsProviders,
+			"org.eclipse.cdt.managedbuilder.core.GCCBuildCommandParser;org.eclipse.cdt.managedbuilder.core.GCCBuiltinSpecsDetector");
 		toolchain.setAttribute(ManagedConfigElementAttribute.id,
 				getAutotoolsToolchainIdentifier(path));
 		toolchain.setAttribute(ManagedConfigElementAttribute.isAbstract, FALSE);
