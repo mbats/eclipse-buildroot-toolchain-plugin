@@ -401,10 +401,6 @@ public class BuildrootToolchainsProvider implements
 		toolchain.addChild(createTool(path, prefix, architecture,
 				BuildrootToolType.C_COMPILER));
 
-		// Create Archiver
-		toolchain.addChild(createTool(path, prefix, architecture,
-				BuildrootToolType.ARCHIVER));
-
 		// Create C Linker
 		toolchain.addChild(createTool(path, prefix, architecture,
 				BuildrootToolType.C_LINKER));
@@ -416,6 +412,10 @@ public class BuildrootToolchainsProvider implements
 			toolchain.addChild(createTool(path, prefix, architecture,
 					BuildrootToolType.CC_LINKER));
 		}
+
+		// Create Archiver
+		toolchain.addChild(createTool(path, prefix, architecture,
+				BuildrootToolType.ARCHIVER));
 
 		// Create pkg-config
 		toolchain.addChild(createTool(path, prefix, architecture,
