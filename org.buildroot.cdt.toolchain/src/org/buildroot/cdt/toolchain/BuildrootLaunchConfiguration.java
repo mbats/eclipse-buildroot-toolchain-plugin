@@ -54,7 +54,7 @@ public class BuildrootLaunchConfiguration {
 		buffer.append("  <launchConfigurationTypeImage");
 		buffer.append("   configTypeID=\"" + getLaunchConfigTypeId() + "\"");
 		buffer.append("   icon=\"icons/br.png\"");
-		buffer.append("   id=\"org.buildroot.cdt.toolchain.launchConfigurationTypeImage\">");
+		buffer.append("   id=\"org.buildroot.cdt.toolchain.launchConfigurationTypeImage." + prefix + "." + architecture + "\">");
 		buffer.append("  </launchConfigurationTypeImage>");
 		buffer.append(" </extension>");
 		buffer.append("</plugin>");
